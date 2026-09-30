@@ -8,7 +8,10 @@ const blogSchema = new mongoose.Schema(
     metaDescription: { type: String },
     keywords: [{ type: String }],
     slug: { type: String, unique: true },
-    shopId: { type: String, required: true },
+    shopId: { type: String, required: true, index: true },
+    shopifyArticleId: { type: String, default: null },
+    shopifyBlogId: { type: String, default: null },
+    publishedAt: { type: Date, default: null },
     seoScore: { type: Number, default: 0 },
     geoScore: { type: Number, default: 0 },
     status: { type: String, enum: ["draft", "published"], default: "draft" },
@@ -16,5 +19,7 @@ const blogSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+blogSchema.index({ shopId: 1, createdAt: -1 });
 
 export default mongoose.model("Blog", blogSchema);

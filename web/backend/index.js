@@ -16,11 +16,23 @@ app.use(express.json());
 connectDB();
 
 // Routes
-// import blogRoutes from "./route/blog.route.js";
-// app.use("/api/blogs", blogRoutes);
+import blogRoutes from "./route/blog.route.js";
+import shopRoutes from "./route/shop.route.js";
+
+app.use("/api/blogs", blogRoutes);
+app.use("/api/shop", shopRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Blog Genius API is running!" });
+});
+
+// Centralized error handler
+app.use((err, req, res, next) => {
+  const status = err.status || 500;
+  res.status(status).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
 });
 
 app.listen(PORT, () => {
