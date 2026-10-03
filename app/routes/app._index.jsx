@@ -1,336 +1,159 @@
-import { useEffect } from "react";
-import { useFetcher } from "react-router";
-import { useAppBridge } from "@shopify/app-bridge-react";
+import { useState } from "react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import { Page, BlockStack, Grid } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
+import dashboardStyles from "../styles/dashboard.css?url";
+import "../styles/dashboard.css";
+import {
+  CreditsBar,
+  RatingFeedbackCard,
+  DashboardHeader,
+  MetricScorecards,
+  ContentByIntentCard,
+  RecentPostsCard,
+  GeoTechnicalHealthCard,
+  CreatePostCallout,
+  ContentCalendar,
+  AppEmbedsFooter,
+  FreshnessModal,
+  AiCitationsModal,
+} from "../components/dashboard";
+
+export const links = () => [{ rel: "stylesheet", href: dashboardStyles }];
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
-
   return null;
 };
 
-export const action = async ({ request }) => {
-  const { admin } = await authenticate.admin(request);
-  const color = ["Red", "Orange", "Yellow", "Green"][
-    Math.floor(Math.random() * 4)
-  ];
-  const response = await admin.graphql(
-    `#graphql
-      mutation populateProduct($product: ProductCreateInput!) {
-        productCreate(product: $product) {
-          product {
-            id
-            title
-            handle
-            status
-            variants(first: 10) {
-              edges {
-                node {
-                  id
-                  price
-                  barcode
-                  createdAt
-                }
-              }
-            }
-            demoInfo: metafield(namespace: "$app", key: "demo_info") {
-              jsonValue
-            }
-          }
-        }
-      }`,
-    {
-      variables: {
-        product: {
-          title: `${color} Snowboard`,
-          metafields: [
-            {
-              namespace: "$app",
-              key: "demo_info",
-              value: "Created by React Router Template",
-            },
-          ],
-        },
-      },
-    },
-  );
-  const responseJson = await response.json();
-  const product = responseJson.data.productCreate.product;
-  const variantId = product.variants.edges[0].node.id;
-  const variantResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyReactRouterTemplateUpdateVariant($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-        productVariants {
-          id
-          price
-          barcode
-          createdAt
-        }
-      }
-    }`,
-    {
-      variables: {
-        productId: product.id,
-        variants: [{ id: variantId, price: "100.00" }],
-      },
-    },
-  );
-  const variantResponseJson = await variantResponse.json();
-  const metaobjectResponse = await admin.graphql(
-    `#graphql
-    mutation shopifyReactRouterTemplateUpsertMetaobject($handle: MetaobjectHandleInput!, $values: JSON!) {
-      metaobjectUpsert(handle: $handle, values: $values) {
-        metaobject {
-          id
-          handle
-          values
-        }
-        userErrors {
-          field
-          message
-        }
-      }
-    }`,
-    {
-      variables: {
-        handle: {
-          type: "$app:example",
-          handle: "demo-entry",
-        },
-        values: {
-          title: "Demo Entry",
-          description:
-            "This metaobject was created by the Shopify app template to demonstrate the metaobject API.",
-        },
-      },
-    },
-  );
-  const metaobjectResponseJson = await metaobjectResponse.json();
+export const shouldRevalidate = () => false;
 
-  return {
-    product: responseJson.data.productCreate.product,
-    variant: variantResponseJson.data.productVariantsBulkUpdate.productVariants,
-    metaobject: metaobjectResponseJson.data.metaobjectUpsert.metaobject,
-  };
-};
+export default function DashboardRoute() {
+  const [geoHealthScore, setGeoHealthScore] = useState(60);
+  const [missingFaqCount, setMissingFaqCount] = useState(1);
+  const [missingSummaryCount, setMissingSummaryCount] = useState(1);
+  const [calendarStatus, setCalendarStatus] = useState("All");
+  const [calendarView, setCalendarView] = useState("Month");
+  const [showRatingBanner, setShowRatingBanner] = useState(true);
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [showFreshnessModal, setShowFreshnessModal] = useState(false);
+  const [showAiCitationsModal, setShowAiCitationsModal] = useState(false);
 
-export default function Index() {
-  const fetcher = useFetcher();
-  const shopify = useAppBridge();
-  const isLoading =
-    ["loading", "submitting"].includes(fetcher.state) &&
-    fetcher.formMethod === "POST";
+  const [posts, setPosts] = useState([
+    {
+      id: "post-1",
+      title: "test",
+      intent: "Informational",
+      publishedAt: "Published 1m ago",
+      geoScore: 60,
+      status: "Published",
+      hasAnswerBlock: false,
+      hasFaqSchema: false,
+    },
+  ]);
 
-  useEffect(() => {
-    if (fetcher.data?.product?.id) {
-      shopify.toast.show("Product created");
+  const handleFixChecklist = (type) => {
+    if (type === "faq") {
+      setMissingFaqCount(0);
+      setGeoHealthScore((prev) => Math.min(100, prev + 20));
+      setPosts((prev) =>
+        prev.map((p) => ({ ...p, hasFaqSchema: true, geoScore: Math.min(100, p.geoScore + 20) })),
+      );
+    } else if (type === "summary") {
+      setMissingSummaryCount(0);
+      setGeoHealthScore((prev) => Math.min(100, prev + 20));
+      setPosts((prev) =>
+        prev.map((p) => ({ ...p, hasAnswerBlock: true, geoScore: Math.min(100, p.geoScore + 20) })),
+      );
     }
-  }, [fetcher.data?.product?.id, shopify]);
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+  };
+
+  const isPostVisible = calendarStatus === "All" || calendarStatus === "Published";
 
   return (
-    <s-page heading="Shopify app template">
-      <s-button slot="primary-action" onClick={generateProduct}>
-        Generate a product
-      </s-button>
+    <Page>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%", paddingBottom: "32px" }}>
+        <BlockStack gap="500">
+          <DashboardHeader />
 
-      <s-section heading="Congrats on creating a new Shopify app 🎉">
-        <s-paragraph>
-          This embedded app template uses{" "}
-          <s-link
-            href="https://shopify.dev/docs/apps/tools/app-bridge"
-            target="_blank"
-          >
-            App Bridge
-          </s-link>{" "}
-          interface examples like an{" "}
-          <s-link href="/app/additional">additional page in the app nav</s-link>
-          , as well as an{" "}
-          <s-link
-            href="https://shopify.dev/docs/api/admin-graphql"
-            target="_blank"
-          >
-            Admin GraphQL
-          </s-link>{" "}
-          mutation demo, to provide a starting point for app development.
-        </s-paragraph>
-      </s-section>
-      <s-section heading="Get started with products">
-        <s-paragraph>
-          Generate a product with GraphQL and get the JSON output for that
-          product. Learn more about the{" "}
-          <s-link
-            href="https://shopify.dev/docs/api/admin-graphql/latest/mutations/productCreate"
-            target="_blank"
-          >
-            productCreate
-          </s-link>{" "}
-          mutation in our API references. Includes a product{" "}
-          <s-link
-            href="https://shopify.dev/docs/apps/build/custom-data/metafields"
-            target="_blank"
-          >
-            metafield
-          </s-link>{" "}
-          and{" "}
-          <s-link
-            href="https://shopify.dev/docs/apps/build/custom-data/metaobjects"
-            target="_blank"
-          >
-            metaobject
-          </s-link>
-          .
-        </s-paragraph>
-        <s-stack direction="inline" gap="base">
-          <s-button
-            onClick={generateProduct}
-            {...(isLoading ? { loading: true } : {})}
-          >
-            Generate a product
-          </s-button>
-          {fetcher.data?.product && (
-            <s-button
-              onClick={() => {
-                shopify.intents.invoke?.("edit:shopify/Product", {
-                  value: fetcher.data?.product?.id,
-                });
-              }}
-              target="_blank"
-              variant="tertiary"
-            >
-              Edit product
-            </s-button>
-          )}
-        </s-stack>
-        {fetcher.data?.product && (
-          <s-section heading="productCreate mutation">
-            <s-stack direction="block" gap="base">
-              <s-box
-                padding="base"
-                borderWidth="base"
-                borderRadius="base"
-                background="subdued"
-              >
-                <pre
-                  style={{
-                    margin: 0,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  <code>{JSON.stringify(fetcher.data.product, null, 2)}</code>
-                </pre>
-              </s-box>
+          <MetricScorecards
+            geoHealthScore={geoHealthScore}
+            publishedCount={posts.length}
+            totalPosts={posts.length}
+            scheduledCount={0}
+            postsNeedingRefresh={0}
+            onOpenAiCitations={() => setShowAiCitationsModal(true)}
+            onOpenFreshness={() => setShowFreshnessModal(true)}
+          />
 
-              <s-heading>productVariantsBulkUpdate mutation</s-heading>
-              <s-box
-                padding="base"
-                borderWidth="base"
-                borderRadius="base"
-                background="subdued"
-              >
-                <pre
-                  style={{
-                    margin: 0,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  <code>{JSON.stringify(fetcher.data.variant, null, 2)}</code>
-                </pre>
-              </s-box>
+          <Grid>
+            <Grid.Cell columnSpan={{ xs: 12, sm: 12, md: 8, lg: 8 }}>
+              <div style={{ height: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <ContentByIntentCard
+                  totalPosts={posts.length}
+                  informationalCount={posts.filter((p) => p.intent === "Informational").length}
+                  buyersGuideCount={posts.filter((p) => p.intent === "Buyer's guide").length}
+                  faqCount={posts.filter((p) => p.intent === "FAQ").length}
+                  howToCount={posts.filter((p) => p.intent === "How-to").length}
+                  companyFactsCount={posts.filter((p) => p.intent === "Company Facts").length}
+                  aboutCount={posts.filter((p) => p.intent === "About").length}
+                />
+                <RecentPostsCard posts={posts} />
+              </div>
+            </Grid.Cell>
 
-              <s-heading>metaobjectUpsert mutation</s-heading>
-              <s-box
-                padding="base"
-                borderWidth="base"
-                borderRadius="base"
-                background="subdued"
-              >
-                <pre
-                  style={{
-                    margin: 0,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  <code>
-                    {JSON.stringify(fetcher.data.metaobject, null, 2)}
-                  </code>
-                </pre>
-              </s-box>
-            </s-stack>
-          </s-section>
-        )}
-      </s-section>
+            <Grid.Cell columnSpan={{ xs: 12, sm: 12, md: 4, lg: 4 }}>
+              <div style={{ height: "100%" }}>
+                <GeoTechnicalHealthCard
+                  missingFaqCount={missingFaqCount}
+                  missingSummaryCount={missingSummaryCount}
+                  onFixChecklist={handleFixChecklist}
+                  onOpenFreshness={() => setShowFreshnessModal(true)}
+                />
+              </div>
+            </Grid.Cell>
+          </Grid>
 
-      <s-section slot="aside" heading="App template specs">
-        <s-paragraph>
-          <s-text>Framework: </s-text>
-          <s-link href="https://reactrouter.com/" target="_blank">
-            React Router
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>Interface: </s-text>
-          <s-link
-            href="https://shopify.dev/docs/api/app-home/using-polaris-components"
-            target="_blank"
-          >
-            Polaris web components
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>API: </s-text>
-          <s-link
-            href="https://shopify.dev/docs/api/admin-graphql"
-            target="_blank"
-          >
-            GraphQL
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>Custom data: </s-text>
-          <s-link
-            href="https://shopify.dev/docs/apps/build/custom-data"
-            target="_blank"
-          >
-            Metafields &amp; metaobjects
-          </s-link>
-        </s-paragraph>
-        <s-paragraph>
-          <s-text>Database: </s-text>
-          <s-link href="https://www.prisma.io/" target="_blank">
-            Prisma
-          </s-link>
-        </s-paragraph>
-      </s-section>
+          <CreatePostCallout />
 
-      <s-section slot="aside" heading="Next steps">
-        <s-unordered-list>
-          <s-list-item>
-            Build an{" "}
-            <s-link
-              href="https://shopify.dev/docs/apps/getting-started/build-app-example"
-              target="_blank"
-            >
-              example app
-            </s-link>
-          </s-list-item>
-          <s-list-item>
-            Explore Shopify&apos;s API with{" "}
-            <s-link
-              href="https://shopify.dev/docs/apps/tools/graphiql-admin-api"
-              target="_blank"
-            >
-              GraphiQL
-            </s-link>
-          </s-list-item>
-        </s-unordered-list>
-      </s-section>
-    </s-page>
+          <ContentCalendar
+            calendarView={calendarView}
+            onViewChange={setCalendarView}
+            calendarStatus={calendarStatus}
+            onStatusChange={setCalendarStatus}
+            isPostVisible={isPostVisible}
+          />
+
+          <RatingFeedbackCard
+            visible={showRatingBanner}
+            onDismiss={() => setShowRatingBanner(false)}
+            userRating={userRating}
+            onRate={setUserRating}
+            hoverRating={hoverRating}
+            onHoverRate={setHoverRating}
+          />
+
+          <CreditsBar
+            monthlyCredits={250}
+            lifetimeCredits={55}
+            resetDate="Nov 2, 2026"
+          />
+
+          <AppEmbedsFooter />
+        </BlockStack>
+
+        <FreshnessModal
+          open={showFreshnessModal}
+          onClose={() => setShowFreshnessModal(false)}
+        />
+
+        <AiCitationsModal
+          open={showAiCitationsModal}
+          onClose={() => setShowAiCitationsModal(false)}
+        />
+      </div>
+    </Page>
   );
 }
 
