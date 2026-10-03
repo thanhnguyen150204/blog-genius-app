@@ -1,0 +1,7 @@
+name = "backend"
+roles = ["backend"]
+webhooks_path = "/api/webhooks"
+
+[commands]
+dev = "yarn dev"
+start = "yarn start"

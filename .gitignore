@@ -16,9 +16,8 @@ database.sqlite
 .env
 .env.*
 
-
-
-
+# Project docs & plans
+PROJECT_PLAN.md
 
 /extensions/*/dist
 
