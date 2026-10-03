@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Card,
   BlockStack,
@@ -18,10 +19,16 @@ export function ContentCalendar({
   onViewChange,
   calendarStatus = "All",
   onStatusChange,
+  calendarIntent = "All",
+  onIntentChange,
   isPostVisible = true,
 }) {
   const navigate = useNavigate();
   const shopify = useAppBridge();
+  const [internalIntent, setInternalIntent] = useState("All");
+
+  const activeIntent = onIntentChange ? calendarIntent : internalIntent;
+  const handleIntentChange = onIntentChange || setInternalIntent;
 
   const handlePostKeyDown = (e) => {
     if (e.key === "Enter" || e.key === " ") {
