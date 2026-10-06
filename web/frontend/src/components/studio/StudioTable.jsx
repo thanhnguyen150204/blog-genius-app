@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Checkbox, Icon } from "@shopify/polaris";
-import { BlogIcon } from "@shopify/polaris-icons";
+import { MagicIcon, EditIcon } from "@shopify/polaris-icons";
 import { ArticleActionsMenu } from "./ArticleActionsMenu";
 
 export function StudioTable({
@@ -20,7 +20,6 @@ export function StudioTable({
   const isPartiallySelected =
     selectedIds.length > 0 && !isAllSelected && posts.some((p) => selectedIds.includes(p.id));
 
-  // Determine type pill style
   const getTypePillStyle = (type) => {
     switch (type) {
       case "Informational":
@@ -40,7 +39,6 @@ export function StudioTable({
     }
   };
 
-  // Determine status pill style matching sample image
   const renderStatusPill = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "published") {
@@ -215,187 +213,179 @@ export function StudioTable({
             const isSelected = selectedIds.includes(post.id);
             const isHovered = hoveredRowId === post.id;
             const typeStyle = getTypePillStyle(post.type);
+            const isAi = post.mode === "ai" || post.isAiGenerated === true || post.creationMode === "ai";
 
-              return (
-                <tr
-                  key={post.id}
-                  onClick={() => onRowClick ? onRowClick(post) : (onEditPost && onEditPost(post))}
-                  onMouseEnter={() => setHoveredRowId(post.id)}
-                  onMouseLeave={() => setHoveredRowId(null)}
-                  style={{
-                    borderBottom: "1px solid #f1f2f4",
-                    borderLeft: "3.5px solid #f97316",
-                    cursor: "pointer",
-                    backgroundColor: isSelected
-                      ? "#f8fafc"
-                      : isHovered
-                      ? "#fff9f0"
-                      : "#fffdf9",
-                    transition: "background-color 0.15s ease",
-                  }}
+            return (
+              <tr
+                key={post.id}
+                onClick={() => onRowClick ? onRowClick(post) : (onEditPost && onEditPost(post))}
+                onMouseEnter={() => setHoveredRowId(post.id)}
+                onMouseLeave={() => setHoveredRowId(null)}
+                style={{
+                  borderBottom: "1px solid #f1f2f4",
+                  borderLeft: "3.5px solid #f97316",
+                  cursor: "pointer",
+                  backgroundColor: isSelected
+                    ? "#f8fafc"
+                    : isHovered
+                    ? "#fff9f0"
+                    : "#fffdf9",
+                  transition: "background-color 0.15s ease",
+                }}
+              >
+                <td
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ padding: "12px 12px", textAlign: "center", verticalAlign: "middle" }}
                 >
-                  {/* Checkbox */}
-                  <td
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ padding: "12px 12px", textAlign: "center", verticalAlign: "middle" }}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => onToggleSelect(post.id)}
-                      label=""
-                      labelHidden
-                    />
-                  </td>
+                  <Checkbox
+                    checked={isSelected}
+                    onChange={() => onToggleSelect(post.id)}
+                    label=""
+                    labelHidden
+                  />
+                </td>
 
-                  {/* Title with BlogIcon & NEW badge */}
-                  <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <div
-                        style={{
-                          width: "18px",
-                          height: "18px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          color: "#64748b",
-                        }}
-                      >
-                        <Icon source={BlogIcon} tone="subdued" />
-                      </div>
-                      <span
-                        style={{
-                          color: "#18181b",
-                          fontWeight: 500,
-                          fontSize: "13px",
-                          textDecoration: "none",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {post.title}
-                      </span>
-
-                      {post.isNew !== false && (
-                        <span
-                          style={{
-                            backgroundColor: "#f97316",
-                            color: "#ffffff",
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "2px 7px",
-                            borderRadius: "9999px",
-                            lineHeight: "12px",
-                            letterSpacing: "0.5px",
-                            flexShrink: 0,
-                          }}
-                        >
-                          NEW
-                        </span>
-                      )}
+                <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        color: isAi ? "#18181b" : "#64748b",
+                      }}
+                    >
+                      <Icon source={isAi ? MagicIcon : EditIcon} tone={isAi ? "base" : "subdued"} />
                     </div>
-                  </td>
-
-                  {/* Type */}
-                  <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                     <span
                       style={{
-                        display: "inline-block",
-                        backgroundColor: typeStyle.bg,
-                        color: typeStyle.color,
-                        border: `1px solid ${typeStyle.border}`,
-                        padding: "3px 12px",
-                        borderRadius: "8px",
-                        fontSize: "12px",
+                        color: "#18181b",
                         fontWeight: 500,
+                        fontSize: "13px",
+                        textDecoration: "none",
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {post.type}
+                      {post.title}
                     </span>
-                  </td>
 
-                  {/* Author */}
-                  <td style={{ padding: "12px 12px", verticalAlign: "middle", color: "#334155", whiteSpace: "nowrap" }}>
-                    {post.author}
-                  </td>
+                    {post.isNew !== false && (
+                      <span
+                        style={{
+                          backgroundColor: "#f97316",
+                          color: "#ffffff",
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          padding: "2px 7px",
+                          borderRadius: "9999px",
+                          lineHeight: "12px",
+                          letterSpacing: "0.5px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        NEW
+                      </span>
+                    )}
+                  </div>
+                </td>
 
-                  {/* Last modified */}
-                  <td style={{ padding: "12px 12px", verticalAlign: "middle", color: "#475569", whiteSpace: "nowrap" }}>
-                    {post.lastModified}
-                  </td>
-
-                  {/* SEO Score Badge */}
-                  <td style={{ padding: "12px 6px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}>
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "24px",
-                        height: "24px",
-                        borderRadius: "50%",
-                        backgroundColor:
-                          post.seoScore !== null && post.seoScore !== undefined
-                            ? post.seoScore >= 80
-                              ? "#16a34a"
-                              : post.seoScore >= 60
-                              ? "#b45309"
-                              : "#dc2626"
-                            : "#334155",
-                        color: "#ffffff",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {post.seoScore !== null && post.seoScore !== undefined ? post.seoScore : "—"}
-                    </div>
-                  </td>
-
-                  {/* GEO Score Badge */}
-                  <td style={{ padding: "12px 6px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}>
-                    <div
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "24px",
-                        height: "24px",
-                        borderRadius: "50%",
-                        backgroundColor:
-                          post.geoScore >= 80 ? "#16a34a" : post.geoScore >= 60 ? "#ea580c" : "#dc2626",
-                        color: "#ffffff",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {post.geoScore}
-                    </div>
-                  </td>
-
-                  {/* Status */}
-                  <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                    {renderStatusPill(post.status)}
-                  </td>
-
-                  {/* Action */}
-                  <td
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ padding: "12px 12px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}
+                <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      backgroundColor: typeStyle.bg,
+                      color: typeStyle.color,
+                      border: `1px solid ${typeStyle.border}`,
+                      padding: "3px 12px",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
+                    }}
                   >
-                    <ArticleActionsMenu
-                      post={post}
-                      onEdit={onEditPost}
-                      onView={onViewPost}
-                      onDuplicate={onDuplicatePost}
-                      onDelete={onDeletePost}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    {post.type}
+                  </span>
+                </td>
+
+                <td style={{ padding: "12px 12px", verticalAlign: "middle", color: "#334155", whiteSpace: "nowrap" }}>
+                  {post.author}
+                </td>
+
+                <td style={{ padding: "12px 12px", verticalAlign: "middle", color: "#475569", whiteSpace: "nowrap" }}>
+                  {post.lastModified}
+                </td>
+
+                <td style={{ padding: "12px 6px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}>
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "50%",
+                      backgroundColor:
+                        post.seoScore !== null && post.seoScore !== undefined
+                          ? post.seoScore >= 80
+                            ? "#16a34a"
+                            : post.seoScore >= 60
+                            ? "#b45309"
+                            : "#dc2626"
+                          : "#334155",
+                      color: "#ffffff",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {post.seoScore !== null && post.seoScore !== undefined ? post.seoScore : "—"}
+                  </div>
+                </td>
+
+                <td style={{ padding: "12px 6px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}>
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "50%",
+                      backgroundColor:
+                        post.geoScore >= 80 ? "#16a34a" : post.geoScore >= 60 ? "#ea580c" : "#dc2626",
+                      color: "#ffffff",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {post.geoScore}
+                  </div>
+                </td>
+
+                <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                  {renderStatusPill(post.status)}
+                </td>
+
+                <td
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ padding: "12px 12px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}
+                >
+                  <ArticleActionsMenu
+                    post={post}
+                    onEdit={onEditPost}
+                    onView={onViewPost}
+                    onDuplicate={onDuplicatePost}
+                    onDelete={onDeletePost}
+                  />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Page,
   BlockStack,
   InlineStack,
   Text,
@@ -8,7 +7,6 @@ import {
   Card,
   Button,
   Modal,
-  List,
 } from "@shopify/polaris";
 import { ArrowLeftIcon } from "@shopify/polaris-icons";
 import { AiStyleToneSettings } from "./AiStyleToneSettings";
@@ -18,7 +16,6 @@ import { KeywordAndScheduleSettings } from "./KeywordAndScheduleSettings";
 import { PostTitleAndOutlineSettings } from "./PostTitleAndOutlineSettings";
 
 export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
-  // Form states
   const [language, setLanguage] = useState("English(US)");
   const [writingStyle, setWritingStyle] = useState("Default");
   const [voiceTone, setVoiceTone] = useState("Default");
@@ -35,18 +32,20 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
 
   const [title, setTitle] = useState("");
   const [outline, setOutline] = useState([]);
-  const [generateFeaturedImage, setGenerateFeaturedImage] = useState(false);
+  const [generateFeaturedImage, setGenerateFeaturedImage] = useState(true);
+  const [productImage, setProductImage] = useState(null);
+  const [featuredImagePrompt, setFeaturedImagePrompt] = useState(
+    "Place the product on a dark slate stone surface against a moody charcoal background, dramatic side lighting casting soft shadows, luxury aesthetic, high-end commercial photo."
+  );
+  const [featuredImageQuality, setFeaturedImageQuality] = useState("Medium");
 
-  // Modals & helpers state
   const [isGenerating, setIsGenerating] = useState(false);
   const [showKeywordModal, setShowKeywordModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
 
-  // Validation errors state
   const [errors, setErrors] = useState({ keywords: false, title: false });
 
-  // Handle keyword changes and clear validation error
   const handleKeywordsChange = (newKeywords) => {
     setKeywords(newKeywords);
     const hasKw = Array.isArray(newKeywords)
@@ -57,7 +56,6 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
     }
   };
 
-  // Handle title changes and clear validation error
   const handleTitleChange = (newTitle) => {
     setTitle(newTitle);
     if (newTitle && newTitle.trim()) {
@@ -65,7 +63,6 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
     }
   };
 
-  // Suggested titles generator
   const handleGenerateTitle = () => {
     const kwStr = Array.isArray(keywords) ? keywords.join(", ") : (keywords || "");
     const kw = kwStr.trim() || "Shopify Ecommerce";
@@ -80,7 +77,6 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
     setErrors((prev) => ({ ...prev, title: false }));
   };
 
-  // Keyword suggestions list
   const suggestedKeywords = [
     { kw: "shopify seo guide 2026", volume: "4.5K/mo", kd: "Low" },
     { kw: "generative engine optimization shopify", volume: "2.8K/mo", kd: "Medium" },
@@ -102,15 +98,6 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
     setShowKeywordModal(false);
   };
 
-  const handleAddOutlineSection = (newSec) => {
-    setOutline((prev) => [...prev, newSec]);
-  };
-
-  const handleRemoveOutlineSection = (index) => {
-    setOutline((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // Submit and launch generation with validation check
   const handleGenerate = () => {
     const hasKw = Array.isArray(keywords)
       ? keywords.length > 0
@@ -129,20 +116,35 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
 
     setTimeout(() => {
       const generatedPostTitle = title.trim();
-      const kwString = Array.isArray(keywords) ? keywords.join(", ") : (keywords || "shopify geo seo");
+      const kwString = Array.isArray(keywords)
+        ? keywords.join(", ")
+        : keywords || "shopify geo seo";
+
+      const featuredImgUrl = generateFeaturedImage
+        ? productImage ||
+          "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800&auto=format&fit=crop&q=80"
+        : null;
+
       const newPost = {
         id: `post-${Date.now()}`,
         title: generatedPostTitle,
+        mode: "ai",
+        isAiGenerated: true,
+        creationMode: "ai",
         intent: "Informational",
         type: "Informational",
         author: "Thành Nguyễn",
         lastModified: "Just now",
+        isNew: true,
         seoScore: 92,
         geoScore: 96,
         status: "Published",
         keyword: kwString,
         hasAnswerBlock: insertSectionSummary,
         hasFaqSchema: true,
+        featuredImage: featuredImgUrl,
+        featuredImagePrompt: generateFeaturedImage ? featuredImagePrompt : "",
+        featuredImageQuality: generateFeaturedImage ? featuredImageQuality : "Medium",
         outline:
           typeof outline === "string" && outline.trim()
             ? outline
@@ -159,10 +161,30 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
             : Array.isArray(outline) && outline.length > 0
             ? outline
             : [
-                { id: "1", level: "h1", title: generatedPostTitle, description: "Overview & Direct Answer Block" },
-                { id: "2", level: "h2", title: "1. Core Principles and Fundamentals", description: "In-depth insights" },
-                { id: "3", level: "h2", title: "2. Strategic Implementation Checklist", description: "Actionable roadmap" },
-                { id: "4", level: "h2", title: "3. Frequently Asked Questions", description: "FAQ Schema block" },
+                {
+                  id: "1",
+                  level: "h1",
+                  title: generatedPostTitle,
+                  description: "Overview & Direct Answer Block",
+                },
+                {
+                  id: "2",
+                  level: "h2",
+                  title: "1. Core Principles and Fundamentals",
+                  description: "In-depth insights",
+                },
+                {
+                  id: "3",
+                  level: "h2",
+                  title: "2. Strategic Implementation Checklist",
+                  description: "Actionable roadmap",
+                },
+                {
+                  id: "4",
+                  level: "h2",
+                  title: "3. Frequently Asked Questions",
+                  description: "FAQ Schema block",
+                },
               ],
         bodyHtml:
           typeof outline === "string" && outline.trim().startsWith("<")
@@ -189,10 +211,22 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
   };
 
   return (
-    <div style={{ maxWidth: "960px", margin: "0 auto", width: "100%", paddingBottom: "40px" }}>
+    <div
+      style={{
+        maxWidth: "960px",
+        margin: "0 auto",
+        width: "100%",
+        paddingBottom: "40px",
+      }}
+    >
       <BlockStack gap="400">
-        {/* Top bar with back button and credits badge */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <InlineStack gap="200" align="center">
             <Button
               icon={ArrowLeftIcon}
@@ -207,14 +241,12 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
           </InlineStack>
         </div>
 
-        {/* Main AI Generate Card */}
         <Card>
           <BlockStack gap="500">
             <Text variant="headingMd" as="h2" fontWeight="bold">
               AI Generate
             </Text>
 
-            {/* Row 1: Language, Writing Style, Voice Tone, Complexity */}
             <AiStyleToneSettings
               language={language}
               onLanguageChange={setLanguage}
@@ -226,7 +258,6 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
               onComplexityChange={setComplexity}
             />
 
-            {/* Row 2: Business description & Target customer */}
             <BusinessContextCard
               businessDesc={businessDesc}
               onBusinessDescChange={setBusinessDesc}
@@ -236,13 +267,13 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
               onInsertCollection={() => setShowCollectionModal(true)}
             />
 
-            {/* Row 3: Type-specific settings */}
             <TypeSpecificSettingsCard
               insertSectionSummary={insertSectionSummary}
-              onToggleSectionSummary={() => setInsertSectionSummary(!insertSectionSummary)}
+              onToggleSectionSummary={() =>
+                setInsertSectionSummary(!insertSectionSummary)
+              }
             />
 
-            {/* Row 4: Keywords & Publishing Schedule */}
             <KeywordAndScheduleSettings
               keywords={keywords}
               onKeywordsChange={handleKeywordsChange}
@@ -254,7 +285,6 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
               error={errors.keywords}
             />
 
-            {/* Row 5: Title, Outline, Featured Image, Generate Button */}
             <PostTitleAndOutlineSettings
               title={title}
               onTitleChange={handleTitleChange}
@@ -263,7 +293,15 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
               onOutlineChange={setOutline}
               keywords={keywords}
               generateFeaturedImage={generateFeaturedImage}
-              onToggleGenerateFeaturedImage={() => setGenerateFeaturedImage(!generateFeaturedImage)}
+              onToggleGenerateFeaturedImage={() =>
+                setGenerateFeaturedImage(!generateFeaturedImage)
+              }
+              productImage={productImage}
+              onProductImageChange={setProductImage}
+              featuredImagePrompt={featuredImagePrompt}
+              onFeaturedImagePromptChange={setFeaturedImagePrompt}
+              featuredImageQuality={featuredImageQuality}
+              onFeaturedImageQualityChange={setFeaturedImageQuality}
               onGenerate={handleGenerate}
               isGenerating={isGenerating}
               error={errors.title}
@@ -272,7 +310,6 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
         </Card>
       </BlockStack>
 
-      {/* Keyword suggestions modal */}
       <Modal
         open={showKeywordModal}
         onClose={() => setShowKeywordModal(false)}
@@ -319,7 +356,6 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
         </Modal.Section>
       </Modal>
 
-      {/* Product picker modal placeholder */}
       <Modal
         open={showProductModal}
         onClose={() => setShowProductModal(false)}
@@ -327,11 +363,18 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
         primaryAction={{
           content: "Insert Selected Product",
           onAction: () => {
-            setBusinessDesc((prev) => `${prev ? prev + " " : ""}Featured Product: Snowboard Pro Series 2026.`);
+            setBusinessDesc((prev) =>
+              `${prev ? prev + " " : ""}Featured Product: Snowboard Pro Series 2026.`
+            );
             setShowProductModal(false);
           },
         }}
-        secondaryActions={[{ content: "Cancel", onAction: () => setShowProductModal(false) }]}
+        secondaryActions={[
+          {
+            content: "Cancel",
+            onAction: () => setShowProductModal(false),
+          },
+        ]}
       >
         <Modal.Section>
           <Text variant="bodySm">
@@ -340,7 +383,6 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
         </Modal.Section>
       </Modal>
 
-      {/* Collection picker modal placeholder */}
       <Modal
         open={showCollectionModal}
         onClose={() => setShowCollectionModal(false)}
@@ -348,11 +390,18 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
         primaryAction={{
           content: "Insert Selected Collection",
           onAction: () => {
-            setBusinessDesc((prev) => `${prev ? prev + " " : ""}Featured Collection: Winter Gear & Outdoor Accessories.`);
+            setBusinessDesc((prev) =>
+              `${prev ? prev + " " : ""}Featured Collection: Winter Gear & Outdoor Accessories.`
+            );
             setShowCollectionModal(false);
           },
         }}
-        secondaryActions={[{ content: "Cancel", onAction: () => setShowCollectionModal(false) }]}
+        secondaryActions={[
+          {
+            content: "Cancel",
+            onAction: () => setShowCollectionModal(false),
+          },
+        ]}
       >
         <Modal.Section>
           <Text variant="bodySm">
