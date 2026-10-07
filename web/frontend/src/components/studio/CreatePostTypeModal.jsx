@@ -35,8 +35,17 @@ export function CreatePostTypeModal({
           >
             {/* Card 1: Generate with AI */}
             <div
+              onClick={onSelectAiGenerate}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelectAiGenerate();
+                }
+              }}
               style={{
-                border: "1px solid #e4e4e7",
+                border: "1.5px solid #e4e4e7",
                 borderRadius: "10px",
                 padding: "16px",
                 backgroundColor: "#ffffff",
@@ -45,6 +54,18 @@ export function CreatePostTypeModal({
                 justifyContent: "space-between",
                 gap: "14px",
                 boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                cursor: "pointer",
+                transition: "all 0.18s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#2563eb";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(37,99,235,0.08)";
+                e.currentTarget.style.backgroundColor = "#fafcff";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#e4e4e7";
+                e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.03)";
+                e.currentTarget.style.backgroundColor = "#ffffff";
               }}
             >
               <BlockStack gap="200">
@@ -83,7 +104,10 @@ export function CreatePostTypeModal({
 
               <button
                 type="button"
-                onClick={onSelectAiGenerate}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectAiGenerate();
+                }}
                 style={{
                   width: "100%",
                   height: "34px",
@@ -114,8 +138,17 @@ export function CreatePostTypeModal({
 
             {/* Card 2: Build from scratch */}
             <div
+              onClick={onSelectScratch}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelectScratch();
+                }
+              }}
               style={{
-                border: "1px solid #e4e4e7",
+                border: "1.5px solid #e4e4e7",
                 borderRadius: "10px",
                 padding: "16px",
                 backgroundColor: "#ffffff",
@@ -124,6 +157,18 @@ export function CreatePostTypeModal({
                 justifyContent: "space-between",
                 gap: "14px",
                 boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                cursor: "pointer",
+                transition: "all 0.18s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#f97316";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(249,115,22,0.08)";
+                e.currentTarget.style.backgroundColor = "#fffdfa";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#e4e4e7";
+                e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.03)";
+                e.currentTarget.style.backgroundColor = "#ffffff";
               }}
             >
               <BlockStack gap="200">
@@ -162,7 +207,10 @@ export function CreatePostTypeModal({
 
               <button
                 type="button"
-                onClick={onSelectScratch}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectScratch();
+                }}
                 style={{
                   width: "100%",
                   height: "34px",

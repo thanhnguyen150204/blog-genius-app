@@ -11,7 +11,7 @@ import {
 import {
   MagicIcon,
   UploadIcon,
-  ImagesIcon,
+  ImageIcon,
   DeleteIcon,
 } from "@shopify/polaris-icons";
 import { OutlineModal } from "./OutlineModal";
@@ -310,7 +310,7 @@ export function PostTitleAndOutlineSettings({
                     Upload image
                   </Button>
                   <Button
-                    icon={ImagesIcon}
+                    icon={ImageIcon}
                     variant="secondary"
                     onClick={() => setIsLibraryModalOpen(true)}
                   >

@@ -161,16 +161,14 @@ export default function Studio() {
   // Render Scratch Builder Screen
   if (viewMode === "scratch-builder") {
     return (
-      <Page>
-        <ScratchBuilderView
-          initialPost={editingScratchPost}
-          onBack={() => {
-            setEditingScratchPost(null);
-            setViewMode("list");
-          }}
-          onCompleteSave={handleCompleteScratchSave}
-        />
-      </Page>
+      <ScratchBuilderView
+        initialPost={editingScratchPost}
+        onBack={() => {
+          setEditingScratchPost(null);
+          setViewMode("list");
+        }}
+        onCompleteSave={handleCompleteScratchSave}
+      />
     );
   }
 
