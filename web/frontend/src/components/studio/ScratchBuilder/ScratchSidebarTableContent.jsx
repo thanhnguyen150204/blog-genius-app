@@ -389,28 +389,60 @@ export function ScratchSidebarTableContent({
               </InlineStack>
 
               {detectedHeadings.length > 0 ? (
-                <BlockStack gap="100">
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                    maxHeight: "260px",
+                    overflowY: "auto",
+                    paddingRight: "4px",
+                  }}
+                >
                   {detectedHeadings.map((h, i) => (
-                    <Box
+                    <div
                       key={h.id || i}
-                      padding="200"
-                      background="bg-surface-secondary"
-                      borderRadius="200"
-                      borderWidth="025"
-                      borderColor="border"
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "8px",
+                        padding: "6px 8px",
+                        borderRadius: "6px",
+                        backgroundColor: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                      }}
                     >
-                      <InlineStack gap="200" blockAlign="center">
-                        <Badge tone="info">{h.level.toUpperCase()}</Badge>
-                        <Text variant="bodySm" as="span" breakWord>
-                          {h.text}
-                        </Text>
-                      </InlineStack>
-                    </Box>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: "#64748b",
+                          backgroundColor: "#e2e8f0",
+                          borderRadius: "4px",
+                          padding: "1px 5px",
+                          lineHeight: "16px",
+                          flexShrink: 0,
+                          marginTop: "1px",
+                        }}
+                      >
+                        {h.level.toLowerCase()}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "12.5px",
+                          color: "#18181b",
+                          lineHeight: "1.4",
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {h.text}
+                      </span>
+                    </div>
                   ))}
-                </BlockStack>
+                </div>
               ) : (
                 <Text variant="bodyXs" tone="subdued">
-                  No headings found in article yet. Add Heading blocks to generate table items.
+                  No headings found in article yet. Headings generated from the outline will appear here automatically.
                 </Text>
               )}
             </BlockStack>

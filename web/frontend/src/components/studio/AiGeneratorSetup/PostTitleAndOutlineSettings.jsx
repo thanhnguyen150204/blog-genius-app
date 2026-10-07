@@ -7,6 +7,7 @@ import {
   Checkbox,
   Icon,
   Modal,
+  ProgressBar,
 } from "@shopify/polaris";
 import {
   MagicIcon,
@@ -77,25 +78,33 @@ export function PostTitleAndOutlineSettings({
   onFeaturedImageQualityChange,
   onGenerate,
   isGenerating = false,
+  generatingProgress = 20,
+  generatingStep = "Step 1/3: Analyzing topic & outline...",
   error = false,
+  onOutlineValidationError,
 }) {
   const [isOutlineModalOpen, setIsOutlineModalOpen] = useState(false);
   const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false);
+  const [isOutlineGenerating, setIsOutlineGenerating] = useState(false);
+  const [outlineGenProgress, setOutlineGenProgress] = useState(10);
+  const [outlineGenStep, setOutlineGenStep] = useState("Step 1/3: Analyzing topic & outline...");
   const [outlineText, setOutlineText] = useState(
     typeof outline === "string"
       ? outline
       : Array.isArray(outline) && outline.length > 0
       ? outline
-          .map(
-            (o) =>
-              `${
-                o.level === "h2"
-                  ? "Heading 2: "
-                  : o.level === "h3"
-                  ? "Heading 3: "
-                  : "• "
-              }${o.title}`
-          )
+          .map((o) => {
+            const level = o.level || (o.type === "heading" ? o.level : "");
+            const prefix =
+              level === "h1"
+                ? "Heading 1: "
+                : level === "h2"
+                ? "Heading 2: "
+                : level === "h3"
+                ? "Heading 3: "
+                : "";
+            return `${prefix}${o.title || o.text || ""}`;
+          })
           .join("\n")
       : ""
   );
@@ -243,7 +252,7 @@ export function PostTitleAndOutlineSettings({
                 fontWeight: 400,
               }}
             >
-              Please enter post title
+              Post title is required!
             </span>
           </div>
         )}
@@ -420,6 +429,32 @@ export function PostTitleAndOutlineSettings({
         )}
       </BlockStack>
 
+      {(isGenerating || isOutlineGenerating) && (
+        <BlockStack gap="150">
+          <InlineStack align="space-between" blockAlign="center">
+            <Text variant="bodyXs" fontWeight="medium" tone="base">
+              {isOutlineGenerating
+                ? outlineGenStep
+                : generatingStep || "Step 1/3: Analyzing topic & outline..."}
+            </Text>
+            <Text variant="bodyXs" tone="subdued">
+              {isOutlineGenerating
+                ? `${outlineGenProgress}%`
+                : `${generatingProgress || 20}%`}
+            </Text>
+          </InlineStack>
+          <ProgressBar
+            progress={
+              isOutlineGenerating
+                ? outlineGenProgress
+                : generatingProgress || 20
+            }
+            size="small"
+            tone="primary"
+          />
+        </BlockStack>
+      )}
+
       <div
         style={{
           display: "flex",
@@ -435,17 +470,26 @@ export function PostTitleAndOutlineSettings({
           onClick={onGenerate}
           size="large"
         >
-          Generate
+          {isGenerating ? "Generating..." : "Generate"}
         </Button>
       </div>
 
       <OutlineModal
         open={isOutlineModalOpen}
-        onClose={() => setIsOutlineModalOpen(false)}
+        onClose={() => {
+          setIsOutlineModalOpen(false);
+          setIsOutlineGenerating(false);
+        }}
         outlineContent={outlineText}
         onSave={handleSaveOutline}
         postTitle={title}
         keywords={Array.isArray(keywords) ? keywords.join(", ") : keywords}
+        onValidationError={onOutlineValidationError}
+        onGeneratingProgress={(isGen, prog, step) => {
+          setIsOutlineGenerating(isGen);
+          setOutlineGenProgress(prog);
+          setOutlineGenStep(step);
+        }}
       />
 
       <Modal

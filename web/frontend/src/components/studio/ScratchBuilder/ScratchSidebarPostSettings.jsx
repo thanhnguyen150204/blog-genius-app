@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   BlockStack,
   InlineStack,
@@ -6,6 +6,10 @@ import {
   Button,
   ButtonGroup,
   RadioButton,
+  Checkbox,
+  Popover,
+  DatePicker,
+  Icon,
   Select,
   TextField,
   Card,
@@ -22,8 +26,81 @@ import {
   DesktopIcon,
   TabletIcon,
   MobileIcon,
+  CalendarIcon,
+  ClockIcon,
 } from "@shopify/polaris-icons";
 import { addImageToLibrary } from "../../../mock/imageLibraryData";
+
+const FULL_MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+const TIME_OPTIONS = [
+  "12:00 AM", "12:30 AM", "01:00 AM", "01:30 AM", "02:00 AM", "02:30 AM",
+  "03:00 AM", "03:30 AM", "04:00 AM", "04:30 AM", "05:00 AM", "05:30 AM",
+  "06:00 AM", "06:30 AM", "07:00 AM", "07:30 AM", "08:00 AM", "08:30 AM",
+  "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+  "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM",
+  "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM", "05:00 PM", "05:30 PM",
+  "06:00 PM", "06:30 PM", "07:00 PM", "07:30 PM", "08:00 PM", "08:30 PM",
+  "09:00 PM", "09:30 PM", "10:00 PM", "10:30 PM", "11:00 PM", "11:30 PM"
+];
+
+function formatDateDisplay(year, month, day) {
+  const m = FULL_MONTH_NAMES[month] || "October";
+  return `${m} ${day}, ${year}`;
+}
+
+function parseDateString(str) {
+  if (!str) return new Date(2026, 9, 8);
+  try {
+    const parts = str.replace(/,/g, "").trim().split(/\s+/);
+    if (parts.length === 3) {
+      const maybeMonth = FULL_MONTH_NAMES.findIndex(
+        (m) => m.toLowerCase().startsWith(parts[0].toLowerCase())
+      );
+      if (maybeMonth >= 0) {
+        const day = parseInt(parts[1], 10) || 1;
+        const year = parseInt(parts[2], 10) || 2026;
+        return new Date(year, maybeMonth, day);
+      }
+      const maybeMonth2 = FULL_MONTH_NAMES.findIndex(
+        (m) => m.toLowerCase().startsWith(parts[1].toLowerCase())
+      );
+      if (maybeMonth2 >= 0) {
+        const day = parseInt(parts[0], 10) || 1;
+        const year = parseInt(parts[2], 10) || 2026;
+        return new Date(year, maybeMonth2, day);
+      }
+    }
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
+  } catch (e) {}
+  return new Date(2026, 9, 8);
+}
+
+function getVisibilitySubtitle(dateStr, timeStr, timezoneStr) {
+  const d = parseDateString(dateStr || "October 8, 2026");
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  const year = d.getFullYear();
+
+  const rawTime = (timeStr || "12:00 PM").trim();
+  let timeWithSec = rawTime;
+  const parts = rawTime.split(" ");
+  if (parts.length === 2) {
+    const timeDigits = parts[0];
+    const period = parts[1];
+    const digitsParts = timeDigits.split(":");
+    if (digitsParts.length === 2) {
+      timeWithSec = `${digitsParts[0]}:${digitsParts[1]}:00 ${period}`;
+    }
+  }
+
+  const tz = timezoneStr || "GMT+7";
+  return `Will become visible on ${month}/${day}/${year} at ${timeWithSec} ${tz}`;
+}
 
 export function ScratchSidebarPostSettings({
   postData,
@@ -37,6 +114,57 @@ export function ScratchSidebarPostSettings({
   const [isEditUrlModalOpen, setIsEditUrlModalOpen] = useState(false);
   const [editUrlBlog, setEditUrlBlog] = useState(postData.blogCategory || "News");
   const [editUrlHandle, setEditUrlHandle] = useState("");
+
+  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
+  const [isTimePopoverOpen, setIsTimePopoverOpen] = useState(false);
+
+  const selectedDateObj = useMemo(() => {
+    return parseDateString(postData.visibilityDate || "October 8, 2026");
+  }, [postData.visibilityDate]);
+
+  const [{ dateViewMonth, dateViewYear }, setDateView] = useState({
+    dateViewMonth: selectedDateObj.getMonth(),
+    dateViewYear: selectedDateObj.getFullYear(),
+  });
+
+  const datePopoverRef = useRef(null);
+  const timePopoverRef = useRef(null);
+
+  useEffect(() => {
+    setDateView({
+      dateViewMonth: selectedDateObj.getMonth(),
+      dateViewYear: selectedDateObj.getFullYear(),
+    });
+  }, [selectedDateObj]);
+
+  const handleDateSelect = ({ start }) => {
+    if (start) {
+      const formatted = formatDateDisplay(start.getFullYear(), start.getMonth(), start.getDate());
+      onChange({ visibilityDate: formatted });
+      setIsDatePopoverOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        datePopoverRef.current &&
+        !datePopoverRef.current.contains(event.target)
+      ) {
+        setIsDatePopoverOpen(false);
+      }
+      if (
+        timePopoverRef.current &&
+        !timePopoverRef.current.contains(event.target)
+      ) {
+        setIsTimePopoverOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   const isInitialCustom =
     Boolean(postData.author) &&
     postData.author !== "Default (Store Default)";
@@ -254,24 +382,275 @@ export function ScratchSidebarPostSettings({
             <Text variant="bodySm" fontWeight="medium" tone="subdued">
               Visibility
             </Text>
-            <InlineStack gap="300">
+
+            <BlockStack gap="150">
               <RadioButton
                 label="Visible"
-                disabled={!isEditMode}
-                checked={isEditMode ? postData.visibility === "visible" : false}
+                checked={postData.visibility !== "hidden"}
                 id="visibility-visible"
                 name="visibility"
                 onChange={() => onChange({ visibility: "visible" })}
               />
               <RadioButton
                 label="Hidden"
-                disabled={!isEditMode}
-                checked={isEditMode ? postData.visibility === "hidden" : false}
+                helpText={
+                  postData.visibility === "hidden" && Boolean(postData.setVisibilityDate)
+                    ? getVisibilitySubtitle(
+                        postData.visibilityDate,
+                        postData.visibilityTime,
+                        postData.visibilityTimezone
+                      )
+                    : undefined
+                }
+                checked={postData.visibility === "hidden"}
                 id="visibility-hidden"
                 name="visibility"
-                onChange={() => onChange({ visibility: "hidden" })}
+                onChange={() =>
+                  onChange({
+                    visibility: "hidden",
+                    setVisibilityDate: postData.setVisibilityDate ?? false,
+                    visibilityDate: postData.visibilityDate || "October 8, 2026",
+                    visibilityTime: postData.visibilityTime || "12:00 PM",
+                    visibilityTimezone: postData.visibilityTimezone || "GMT+7",
+                  })
+                }
               />
-            </InlineStack>
+            </BlockStack>
+
+            {postData.visibility === "hidden" && (
+              <div style={{ paddingLeft: "24px", marginTop: "4px" }}>
+                <BlockStack gap="200">
+                  <Checkbox
+                    label="Set visibility date"
+                    checked={Boolean(postData.setVisibilityDate)}
+                    onChange={(newVal) => onChange({ setVisibilityDate: newVal })}
+                  />
+
+                  {/* Date Picker and Time Picker always displayed when Hidden */}
+                  <BlockStack gap="200">
+                    {/* Date Picker Input & Popover */}
+                    <div
+                      ref={datePopoverRef}
+                      style={{ position: "relative", width: "100%" }}
+                    >
+                      <button
+                        type="button"
+                        id="visibility-date-picker-button"
+                        onClick={() => {
+                          setIsDatePopoverOpen((prev) => !prev);
+                          setIsTimePopoverOpen(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "flex-start",
+                          gap: "8px",
+                          minHeight: "36px",
+                          height: "36px",
+                          padding: "6px 12px",
+                          backgroundColor: "#ffffff",
+                          border: isDatePopoverOpen
+                            ? "2px solid #005bd3"
+                            : "1px solid #8c9196",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          boxShadow: isDatePopoverOpen
+                            ? "0 0 0 1px #005bd3"
+                            : "none",
+                          boxSizing: "border-box",
+                          transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            color: "#5c5f62",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Icon source={CalendarIcon} tone="subdued" />
+                        </div>
+                        <span
+                          style={{
+                            fontSize: "14px",
+                            color: "#202223",
+                            fontWeight: 400,
+                            flex: 1,
+                          }}
+                        >
+                          {postData.visibilityDate || "October 8, 2026"}
+                        </span>
+                      </button>
+
+                      {isDatePopoverOpen && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "calc(100% + 4px)",
+                            left: 0,
+                            zIndex: 9999,
+                            backgroundColor: "#ffffff",
+                            borderRadius: "12px",
+                            boxShadow:
+                              "0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 20px rgba(0, 0, 0, 0.15)",
+                            padding: "12px",
+                            minWidth: "290px",
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DatePicker
+                            month={dateViewMonth}
+                            year={dateViewYear}
+                            onChange={handleDateSelect}
+                            onMonthChange={(m, y) =>
+                              setDateView({ dateViewMonth: m, dateViewYear: y })
+                            }
+                            selected={{
+                              start: selectedDateObj,
+                              end: selectedDateObj,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Time Picker Input & Popover */}
+                    <div
+                      ref={timePopoverRef}
+                      style={{ position: "relative", width: "100%" }}
+                    >
+                      <button
+                        type="button"
+                        id="visibility-time-picker-button"
+                        onClick={() => {
+                          setIsTimePopoverOpen((prev) => !prev);
+                          setIsDatePopoverOpen(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          minHeight: "36px",
+                          height: "36px",
+                          padding: "6px 12px",
+                          backgroundColor: "#ffffff",
+                          border: isTimePopoverOpen
+                            ? "2px solid #005bd3"
+                            : "1px solid #8c9196",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          boxShadow: isTimePopoverOpen
+                            ? "0 0 0 1px #005bd3"
+                            : "none",
+                          boxSizing: "border-box",
+                          transition: "border-color 0.15s ease, box-shadow 0.15s ease",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              color: "#5c5f62",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Icon source={ClockIcon} tone="subdued" />
+                          </div>
+                          <span
+                            style={{
+                              fontSize: "14px",
+                              color: "#202223",
+                              fontWeight: 400,
+                            }}
+                          >
+                            {postData.visibilityTime || "12:00 PM"}
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            color: "#6d7175",
+                            fontSize: "13px",
+                            fontWeight: 400,
+                          }}
+                        >
+                          {postData.visibilityTimezone || "GMT+7"}
+                        </span>
+                      </button>
+
+                      {isTimePopoverOpen && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "calc(100% + 4px)",
+                            left: 0,
+                            right: 0,
+                            zIndex: 9999,
+                            backgroundColor: "#ffffff",
+                            borderRadius: "8px",
+                            boxShadow:
+                              "0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 20px rgba(0, 0, 0, 0.15)",
+                            maxHeight: "220px",
+                            overflowY: "auto",
+                            padding: "4px 0",
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {TIME_OPTIONS.map((timeStr) => {
+                            const isSelected =
+                              (postData.visibilityTime || "12:00 PM") === timeStr;
+                            return (
+                              <div
+                                key={timeStr}
+                                onClick={() => {
+                                  onChange({ visibilityTime: timeStr });
+                                  setIsTimePopoverOpen(false);
+                                }}
+                                style={{
+                                  padding: "8px 16px",
+                                  fontSize: "13.5px",
+                                  textAlign: "left",
+                                  color: isSelected ? "#005bd3" : "#202223",
+                                  fontWeight: isSelected ? 600 : 400,
+                                  backgroundColor: isSelected
+                                    ? "#f0f7ff"
+                                    : "transparent",
+                                  cursor: "pointer",
+                                  transition: "background-color 0.1s ease",
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isSelected)
+                                    e.currentTarget.style.backgroundColor =
+                                      "#f6f6f7";
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isSelected)
+                                    e.currentTarget.style.backgroundColor =
+                                      "transparent";
+                                }}
+                              >
+                                {timeStr}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </BlockStack>
+                </BlockStack>
+              </div>
+            )}
           </BlockStack>
         </BlockStack>
 

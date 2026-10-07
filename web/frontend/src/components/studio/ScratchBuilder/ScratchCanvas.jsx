@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button, Icon } from "@shopify/polaris";
 import {
   UploadIcon,
@@ -12,6 +12,100 @@ import {
   ChevronUpIcon,
 } from "@shopify/polaris-icons";
 import { addImageToLibrary } from "../../../mock/imageLibraryData";
+
+/**
+ * Auto-growing textarea that reflows text naturally without internal scrollbars.
+ * Features 60fps continuous requestAnimationFrame height adjustments and GPU-accelerated transitions.
+ */
+function AutoGrowTextarea({
+  value,
+  onChange,
+  onFocus,
+  onBlur,
+  placeholder,
+  viewport,
+  style = {},
+  className = "",
+}) {
+  const textareaRef = useRef(null);
+
+  const adjustHeight = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  useEffect(() => {
+    adjustHeight();
+
+    // Continuously adjust height every frame during the 450ms transition
+    let frameId;
+    const start = performance.now();
+    const duration = 480;
+
+    const animateReflow = (now) => {
+      adjustHeight();
+      if (now - start < duration) {
+        frameId = requestAnimationFrame(animateReflow);
+      } else {
+        adjustHeight();
+      }
+    };
+
+    frameId = requestAnimationFrame(animateReflow);
+
+    let resizeObserver;
+    if (typeof ResizeObserver !== "undefined" && textareaRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        adjustHeight();
+      });
+      resizeObserver.observe(textareaRef.current);
+    }
+
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, [value, viewport]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      value={value || ""}
+      onChange={(e) => {
+        if (onChange) onChange(e);
+        adjustHeight();
+      }}
+      onFocus={onFocus}
+      onBlur={onBlur}
+      placeholder={placeholder}
+      rows={1}
+      className={className}
+      style={{
+        width: "100%",
+        display: "block",
+        boxSizing: "border-box",
+        border: "none",
+        outline: "none",
+        backgroundColor: "transparent",
+        resize: "none",
+        overflow: "hidden",
+        fontFamily: "inherit",
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+        overflowWrap: "break-word",
+        margin: 0,
+        padding: 0,
+        transform: "translateZ(0)",
+        willChange: "font-size, line-height",
+        transition:
+          "font-size 0.45s cubic-bezier(0.16, 1, 0.3, 1), line-height 0.45s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease, padding 0.45s ease",
+        ...style,
+      }}
+    />
+  );
+}
 
 export function ScratchCanvas({
   postData,
@@ -63,45 +157,51 @@ export function ScratchCanvas({
     }
   };
 
-  const getCanvasWidth = () => {
+  const getCanvasConfig = () => {
     switch (viewport) {
-      case "tablet":
-        return "768px";
       case "mobile":
-        return "380px";
-      default:
-        return "880px";
+        return {
+          width: "420px",
+          maxWidth: "420px",
+          padding: "24px 16px 96px 16px",
+          titleFontSize: "22px",
+          imageHeight: "260px",
+          blockGap: "16px",
+        };
+      case "tablet":
+        return {
+          width: "768px",
+          maxWidth: "768px",
+          padding: "36px 32px 96px 32px",
+          titleFontSize: "27px",
+          imageHeight: "380px",
+          blockGap: "20px",
+        };
+      default: // desktop
+        return {
+          width: "1000px",
+          maxWidth: "1000px",
+          padding: "48px 56px 96px 56px",
+          titleFontSize: "34px",
+          imageHeight: "480px",
+          blockGap: "24px",
+        };
     }
   };
 
-  const getFeaturedImageStyle = () => {
-    let size = postData.imageSize || "original";
-    if (postData.imageScope === "Per device" && postData.deviceImageSizes) {
-      size = postData.deviceImageSizes[viewport] || (viewport === "mobile" ? "100%" : "original");
-    }
-
-    if (size === "100%") {
-      return { width: "100%", maxHeight: "450px", objectFit: "cover", display: "block" };
-    }
-    if (size === "original") {
-      return { width: "100%", maxHeight: "360px", objectFit: "cover", display: "block" };
-    }
-    if (size.endsWith("px")) {
-      return { maxWidth: size, width: "100%", margin: "0 auto", objectFit: "cover", display: "block" };
-    }
-    return { width: "100%", maxHeight: "360px", objectFit: "cover", display: "block" };
-  };
+  const canvasConfig = getCanvasConfig();
 
   return (
     <div
       style={{
         flex: 1,
-        backgroundColor: "#f4f4f5",
+        backgroundColor: "#ffffff",
         overflowY: "auto",
+        overflowX: "hidden",
         height: "calc(100vh - 56px)",
-        padding: "32px 24px 64px 24px",
         display: "flex",
         justifyContent: "center",
+        alignItems: "flex-start",
       }}
     >
       <input
@@ -114,36 +214,37 @@ export function ScratchCanvas({
 
       <div
         style={{
-          width: getCanvasWidth(),
+          width: canvasConfig.width,
+          maxWidth: canvasConfig.maxWidth,
+          margin: "0 auto",
           backgroundColor: "#ffffff",
-          borderRadius: viewport === "desktop" ? "8px" : "16px",
-          border: "1px solid #e4e4e7",
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-          padding: viewport === "mobile" ? "20px 16px" : "40px 48px",
-          minHeight: "750px",
-          transition: "width 0.25s ease",
+          padding: canvasConfig.padding,
+          minHeight: "100%",
           display: "flex",
           flexDirection: "column",
-          gap: "24px",
+          gap: canvasConfig.blockGap,
+          boxSizing: "border-box",
+          transform: "translateZ(0)",
+          willChange: "width, max-width, padding, gap",
+          transition:
+            "width 0.45s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1), padding 0.45s cubic-bezier(0.16, 1, 0.3, 1), gap 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
         }}
       >
         <div style={{ position: "relative" }}>
-          <input
-            type="text"
+          <AutoGrowTextarea
             value={postData.title || ""}
             onChange={(e) => onPostDataChange({ title: e.target.value })}
             placeholder="This is the blog post title"
+            viewport={viewport}
             style={{
-              width: "100%",
-              fontSize: viewport === "mobile" ? "22px" : "32px",
+              fontSize: canvasConfig.titleFontSize,
               fontWeight: 700,
               color: "#18181b",
-              border: "none",
-              outline: "none",
-              backgroundColor: "transparent",
-              fontFamily: "inherit",
               lineHeight: "1.25",
               padding: "4px 0",
+              letterSpacing: "-0.015em",
+              transition:
+                "font-size 0.45s cubic-bezier(0.16, 1, 0.3, 1), line-height 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           />
         </div>
@@ -157,12 +258,24 @@ export function ScratchCanvas({
                 overflow: "hidden",
                 border: "1px solid #e4e4e7",
                 textAlign: "center",
+                height: canvasConfig.imageHeight,
+                transform: "translateZ(0)",
+                willChange: "height",
+                transition: "height 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
               }}
             >
               <img
                 src={postData.featuredImage}
                 alt={postData.imageAlt || "Featured image"}
-                style={getFeaturedImageStyle()}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                  transform: "translateZ(0)",
+                  willChange: "transform",
+                  transition: "all 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
+                }}
               />
               <div
                 style={{
@@ -241,11 +354,12 @@ export function ScratchCanvas({
             <div
               style={{
                 borderRadius: "8px",
-                border: "1px solid #3b82f6",
+                border: "1px solid #e2e8f0",
                 backgroundColor: "#ffffff",
-                padding: "16px 20px",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
-                transition: "all 0.2s ease",
+                padding: viewport === "mobile" ? "14px 16px" : "20px 24px",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                margin: "4px 0 12px 0",
+                transition: "padding 0.35s ease, margin 0.35s ease",
               }}
             >
               {detectedHeadings.length === 0 ? (
@@ -294,18 +408,20 @@ export function ScratchCanvas({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      marginBottom: "12px",
+                      marginBottom: "14px",
                     }}
                   >
-                    <span
+                    <h3
                       style={{
+                        margin: 0,
                         fontWeight: 700,
-                        fontSize: "15px",
-                        color: toc.textColor || "#000000",
+                        fontSize: "16px",
+                        color: "#18181b",
+                        letterSpacing: "-0.01em",
                       }}
                     >
                       {toc.title || "Table of Contents"}
-                    </span>
+                    </h3>
                     {toc.collapsible && (
                       <Button
                         size="slim"
@@ -321,12 +437,15 @@ export function ScratchCanvas({
                       style={{
                         display: "grid",
                         gridTemplateColumns:
-                          toc.layout === "3-col"
+                          viewport === "mobile"
+                            ? "1fr"
+                            : toc.layout === "3-col"
                             ? "repeat(3, 1fr)"
                             : toc.layout === "2-col"
                             ? "repeat(2, 1fr)"
                             : "1fr",
-                        gap: "8px 16px",
+                        gap: "6px 16px",
+                        transition: "all 0.35s ease",
                       }}
                     >
                       {detectedHeadings.map((h, i) => {
@@ -342,28 +461,46 @@ export function ScratchCanvas({
                         const indentPadding =
                           toc.indentation === "hierarchical"
                             ? h.level === "h3"
-                              ? "18px"
+                              ? "20px"
                               : h.level === "h4"
-                              ? "32px"
+                              ? "36px"
+                              : h.level === "h5"
+                              ? "52px"
                               : "0px"
                             : "0px";
+
+                        const linkColor = toc.textColor && toc.textColor !== "#000000" ? toc.textColor : "#2563eb";
 
                         return (
                           <div
                             key={h.id || i}
                             style={{
                               paddingLeft: indentPadding,
-                              fontSize: "13px",
-                              lineHeight: "1.4",
-                              color: toc.textColor || "#000000",
-                              cursor: "pointer",
-                              transition: "opacity 0.15s ease",
+                              fontSize: "13.5px",
+                              lineHeight: "1.55",
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
-                            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                           >
-                            <span style={{ fontWeight: 600 }}>{prefix}</span>
-                            <span>{h.text}</span>
+                            <a
+                              href={`#${h.id}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                const el = document.getElementById(h.id);
+                                if (el) {
+                                  el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                }
+                              }}
+                              style={{
+                                color: linkColor,
+                                textDecoration: "underline",
+                                cursor: "pointer",
+                                transition: "color 0.15s ease",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = "#1d4ed8")}
+                              onMouseLeave={(e) => (e.currentTarget.style.color = linkColor)}
+                            >
+                              <span style={{ fontWeight: 600 }}>{prefix}</span>
+                              <span>{h.text}</span>
+                            </a>
                           </div>
                         );
                       })}
@@ -375,19 +512,28 @@ export function ScratchCanvas({
           );
         })()}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: canvasConfig.blockGap,
+            transition: "gap 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
           {blocks.map((block, index) => {
             const isEditing = editingBlockId === (block.id || index);
 
             return (
               <div
                 key={block.id || index}
+                id={block.id || `b-${index}`}
                 style={{
                   position: "relative",
                   borderRadius: "8px",
                   border: isEditing ? "1px solid #3b82f6" : "1px solid transparent",
                   padding: "6px 8px",
-                  transition: "border-color 0.15s ease",
+                  transition:
+                    "border-color 0.15s ease, padding 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
                 onMouseEnter={(e) => {
                   if (!isEditing) e.currentTarget.style.border = "1px dashed #cbd5e1";
@@ -397,42 +543,53 @@ export function ScratchCanvas({
                 }}
               >
                 {block.type === "heading" && (
-                  <input
-                    type="text"
+                  <AutoGrowTextarea
                     value={block.text}
                     onChange={(e) => onUpdateBlock(index, { ...block, text: e.target.value })}
                     onFocus={() => setEditingBlockId(block.id || index)}
                     onBlur={() => setEditingBlockId(null)}
+                    viewport={viewport}
+                    placeholder="Enter heading..."
                     style={{
-                      width: "100%",
-                      fontSize: block.level === "h3" ? "18px" : "22px",
-                      fontWeight: 600,
+                      fontSize:
+                        block.level === "h1"
+                          ? viewport === "mobile"
+                            ? "24px"
+                            : viewport === "tablet"
+                            ? "28px"
+                            : "32px"
+                          : block.level === "h3"
+                          ? viewport === "mobile"
+                            ? "16px"
+                            : viewport === "tablet"
+                            ? "17px"
+                            : "19px"
+                          : viewport === "mobile"
+                          ? "19px"
+                          : viewport === "tablet"
+                          ? "21px"
+                          : "24px",
+                      fontWeight: 700,
                       color: "#18181b",
-                      border: "none",
-                      outline: "none",
-                      backgroundColor: "transparent",
-                      fontFamily: "inherit",
+                      lineHeight: "1.32",
+                      letterSpacing: "-0.015em",
                     }}
                   />
                 )}
 
                 {block.type === "paragraph" && (
-                  <textarea
-                    rows={Math.max(2, Math.ceil((block.text || "").length / 80))}
+                  <AutoGrowTextarea
                     value={block.text}
                     onChange={(e) => onUpdateBlock(index, { ...block, text: e.target.value })}
                     onFocus={() => setEditingBlockId(block.id || index)}
                     onBlur={() => setEditingBlockId(null)}
+                    viewport={viewport}
+                    placeholder="Enter paragraph text..."
                     style={{
-                      width: "100%",
-                      fontSize: "14px",
+                      fontSize: viewport === "mobile" ? "14.5px" : "15.5px",
                       color: "#374151",
-                      lineHeight: "1.6",
-                      border: "none",
-                      outline: "none",
-                      backgroundColor: "transparent",
-                      resize: "none",
-                      fontFamily: "inherit",
+                      lineHeight: "1.75",
+                      letterSpacing: "0.005em",
                     }}
                   />
                 )}
@@ -443,7 +600,8 @@ export function ScratchCanvas({
                       backgroundColor: "#f0fdf4",
                       border: "1px solid #bbf7d0",
                       borderRadius: "8px",
-                      padding: "16px",
+                      padding: viewport === "mobile" ? "12px 14px" : "16px 20px",
+                      transition: "padding 0.35s ease",
                     }}
                   >
                     <div
@@ -454,26 +612,24 @@ export function ScratchCanvas({
                         color: "#16a34a",
                         fontWeight: 700,
                         fontSize: "13px",
-                        marginBottom: "6px",
+                        marginBottom: "8px",
                       }}
                     >
                       <Icon source={MagicIcon} tone="success" />
                       <span>{block.title || "Direct Answer Summary Block"}</span>
                     </div>
-                    <textarea
-                      rows={3}
+                    <AutoGrowTextarea
                       value={block.text}
                       onChange={(e) => onUpdateBlock(index, { ...block, text: e.target.value })}
+                      onFocus={() => setEditingBlockId(block.id || index)}
+                      onBlur={() => setEditingBlockId(null)}
+                      viewport={viewport}
+                      placeholder="Enter direct answer summary..."
                       style={{
-                        width: "100%",
-                        fontSize: "13.5px",
+                        fontSize: viewport === "mobile" ? "13.5px" : "14.5px",
                         color: "#166534",
-                        lineHeight: "1.5",
-                        border: "none",
-                        outline: "none",
-                        backgroundColor: "transparent",
-                        fontFamily: "inherit",
-                        resize: "none",
+                        lineHeight: "1.65",
+                        fontWeight: 500,
                       }}
                     />
                   </div>
@@ -521,14 +677,31 @@ export function ScratchCanvas({
                     style={{
                       border: "1px solid #e2e8f0",
                       borderRadius: "8px",
-                      padding: "12px 16px",
+                      padding: viewport === "mobile" ? "12px 14px" : "14px 18px",
                       backgroundColor: "#ffffff",
+                      transition: "padding 0.35s ease",
                     }}
                   >
-                    <div style={{ fontWeight: 600, fontSize: "14px", color: "#18181b", marginBottom: "4px" }}>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: viewport === "mobile" ? "13.5px" : "14.5px",
+                        color: "#18181b",
+                        marginBottom: "6px",
+                        transition: "font-size 0.35s ease",
+                      }}
+                    >
                       Q: {block.question}
                     </div>
-                    <div style={{ fontSize: "13.5px", color: "#475569", lineHeight: "1.5" }}>
+                    <div
+                      style={{
+                        fontSize: viewport === "mobile" ? "13px" : "14px",
+                        color: "#475569",
+                        lineHeight: "1.65",
+                        wordBreak: "break-word",
+                        transition: "font-size 0.35s ease, line-height 0.35s ease",
+                      }}
+                    >
                       A: {block.answer}
                     </div>
                   </div>
@@ -540,13 +713,30 @@ export function ScratchCanvas({
                       borderLeft: "4px solid #3b82f6",
                       backgroundColor: "#eff6ff",
                       borderRadius: "4px 8px 8px 4px",
-                      padding: "12px 16px",
+                      padding: viewport === "mobile" ? "12px 14px" : "14px 18px",
+                      transition: "padding 0.35s ease",
                     }}
                   >
-                    <div style={{ fontWeight: 600, fontSize: "13px", color: "#1e40af", marginBottom: "3px" }}>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: viewport === "mobile" ? "13px" : "14px",
+                        color: "#1e40af",
+                        marginBottom: "4px",
+                        transition: "font-size 0.35s ease",
+                      }}
+                    >
                       {block.title}
                     </div>
-                    <div style={{ fontSize: "13px", color: "#1e3a8a", lineHeight: "1.5" }}>
+                    <div
+                      style={{
+                        fontSize: viewport === "mobile" ? "13px" : "13.5px",
+                        color: "#1e3a8a",
+                        lineHeight: "1.6",
+                        wordBreak: "break-word",
+                        transition: "font-size 0.35s ease, line-height 0.35s ease",
+                      }}
+                    >
                       {block.text}
                     </div>
                   </div>
@@ -672,3 +862,4 @@ export function ScratchCanvas({
 }
 
 export default ScratchCanvas;
+

@@ -16,7 +16,7 @@ export function StudioPagination({
         display: "flex",
         alignItems: "center",
         justifyContent: "flex-start",
-        gap: "10px",
+        gap: "8px",
         paddingTop: "6px",
         paddingLeft: "2px",
       }}
@@ -29,22 +29,22 @@ export function StudioPagination({
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          width: "28px",
-          height: "28px",
-          borderRadius: "6px",
+          width: "24px",
+          height: "24px",
+          borderRadius: "5px",
           border: "none",
-          backgroundColor: isFirstPage ? "#ebeef2" : "#ebeef2",
-          color: isFirstPage ? "#a1a1aa" : "#3f3f46",
+          backgroundColor: "#ebeef2",
+          color: isFirstPage ? "#a1a1aa" : "#52525b",
           cursor: isFirstPage ? "not-allowed" : "pointer",
           transition: "all 0.15s ease",
-          opacity: isFirstPage ? 0.7 : 1,
+          opacity: isFirstPage ? 0.6 : 1,
         }}
         aria-label="Previous page"
       >
         <Icon source={ChevronLeftIcon} tone={isFirstPage ? "subdued" : "base"} />
       </button>
 
-      <span style={{ fontSize: "13px", color: "#334155", fontWeight: 500, userSelect: "none" }}>
+      <span style={{ fontSize: "12px", color: "#71717a", fontWeight: 400, userSelect: "none" }}>
         {currentPage} / {Math.max(1, totalPages)}
       </span>
 
@@ -56,15 +56,15 @@ export function StudioPagination({
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          width: "28px",
-          height: "28px",
-          borderRadius: "6px",
+          width: "24px",
+          height: "24px",
+          borderRadius: "5px",
           border: "none",
-          backgroundColor: isLastPage ? "#ebeef2" : "#ebeef2",
-          color: isLastPage ? "#a1a1aa" : "#3f3f46",
+          backgroundColor: "#ebeef2",
+          color: isLastPage ? "#a1a1aa" : "#52525b",
           cursor: isLastPage ? "not-allowed" : "pointer",
           transition: "all 0.15s ease",
-          opacity: isLastPage ? 0.7 : 1,
+          opacity: isLastPage ? 0.6 : 1,
         }}
         aria-label="Next page"
       >

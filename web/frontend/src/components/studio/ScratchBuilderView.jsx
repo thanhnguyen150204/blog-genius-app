@@ -50,7 +50,11 @@ export function ScratchBuilderView({
     id: initialPost?.id || `post-${Date.now()}`,
     title: initialPost?.title || "This is the blog post title 4",
     status: initialPost?.status || "Draft",
-    visibility: "visible",
+    visibility: initialPost?.visibility || "visible",
+    setVisibilityDate: initialPost?.setVisibilityDate ?? true,
+    visibilityDate: initialPost?.visibilityDate || "October 8, 2026",
+    visibilityTime: initialPost?.visibilityTime || "12:00 PM",
+    visibilityTimezone: initialPost?.visibilityTimezone || "GMT+7",
     featuredImage: initialPost?.featuredImage || null,
     imageAlt: initialPost?.imageAlt || "",
     imageScope: "All devices",
@@ -68,7 +72,7 @@ export function ScratchBuilderView({
     seoScore: initialPost?.seoScore ?? 85,
     geoScore: initialPost?.geoScore ?? 88,
     tableOfContents: initialPost?.tableOfContents || {
-      enabled: false,
+      enabled: true,
       title: "Table of Contents",
       textColor: "#000000",
       listStyle: "none",
@@ -79,13 +83,162 @@ export function ScratchBuilderView({
     },
   };
 
-  const initialBlocks = [
-    {
-      id: "b-1",
-      type: "paragraph",
-      text: "This is a sample paragraph",
-    },
-  ];
+  const parseOutlineToBlocks = (post) => {
+    if (Array.isArray(post?.blocks) && post.blocks.length > 0) {
+      return post.blocks;
+    }
+
+    const formatCombinedParagraph = (lines) => {
+      if (!lines || lines.length === 0) return "";
+      return lines
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => (/[.!?]$/.test(s) ? s : `${s}.`))
+        .join(" ");
+    };
+
+    if (typeof post?.outline === "string" && post.outline.trim()) {
+      const outlineStr = post.outline.trim();
+      if (outlineStr.includes("<")) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(outlineStr, "text/html");
+        const elements = doc.body.childNodes;
+        const parsed = [];
+        let bIdx = 1;
+        let currentLines = [];
+
+        const flushLines = () => {
+          const combined = formatCombinedParagraph(currentLines);
+          if (combined) {
+            parsed.push({
+              id: `b-${bIdx++}`,
+              type: "paragraph",
+              text: combined,
+            });
+          }
+          currentLines = [];
+        };
+
+        elements.forEach((node) => {
+          const tag = node.nodeName?.toLowerCase();
+          const text = (node.textContent || "").trim();
+          if (!text) return;
+          if (tag === "h1" || tag === "h2" || tag === "h3") {
+            flushLines();
+            parsed.push({
+              id: `b-${bIdx++}`,
+              type: "heading",
+              level: tag,
+              text: text,
+            });
+          } else if (tag === "ul" || tag === "ol") {
+            node.querySelectorAll("li").forEach((li) => {
+              const liText = (li.textContent || "").trim();
+              if (liText) {
+                currentLines.push(liText);
+              }
+            });
+          } else if (tag === "li" || tag === "p") {
+            currentLines.push(text);
+          }
+        });
+        flushLines();
+        if (parsed.length > 0) return parsed;
+      } else {
+        const lines = outlineStr.split("\n");
+        const parsed = [];
+        let bIdx = 1;
+        let currentLines = [];
+
+        const flushLines = () => {
+          const combined = formatCombinedParagraph(currentLines);
+          if (combined) {
+            parsed.push({
+              id: `b-${bIdx++}`,
+              type: "paragraph",
+              text: combined,
+            });
+          }
+          currentLines = [];
+        };
+
+        lines.forEach((line) => {
+          const trimmed = line.trim();
+          if (!trimmed) return;
+          if (trimmed.toLowerCase().startsWith("heading 1:") || trimmed.startsWith("# ")) {
+            flushLines();
+            parsed.push({
+              id: `b-${bIdx++}`,
+              type: "heading",
+              level: "h1",
+              text: trimmed.replace(/^(heading 1:\s*|#\s*)/i, "").trim(),
+            });
+          } else if (trimmed.toLowerCase().startsWith("heading 2:") || trimmed.startsWith("## ")) {
+            flushLines();
+            parsed.push({
+              id: `b-${bIdx++}`,
+              type: "heading",
+              level: "h2",
+              text: trimmed.replace(/^(heading 2:\s*|##\s*)/i, "").trim(),
+            });
+          } else if (trimmed.toLowerCase().startsWith("heading 3:") || trimmed.startsWith("### ")) {
+            flushLines();
+            parsed.push({
+              id: `b-${bIdx++}`,
+              type: "heading",
+              level: "h3",
+              text: trimmed.replace(/^(heading 3:\s*|###\s*)/i, "").trim(),
+            });
+          } else {
+            currentLines.push(trimmed.replace(/^[•\-\*]\s*/, "").trim());
+          }
+        });
+        flushLines();
+        if (parsed.length > 0) return parsed;
+      }
+    }
+    if (Array.isArray(post?.outline) && post.outline.length > 0) {
+      return post.outline.map((o, idx) => ({
+        id: `b-${idx + 1}`,
+        type: "heading",
+        level: o.level || "h2",
+        text: o.title || o.text || "Heading",
+      }));
+    }
+    const postTitle = post?.title || "Strategic Overview & Key Insights";
+    return [
+      {
+        id: "b-1",
+        type: "heading",
+        level: "h1",
+        text: postTitle,
+      },
+      {
+        id: "b-2",
+        type: "heading",
+        level: "h2",
+        text: "1. Core Strategic Objectives & Context",
+      },
+      {
+        id: "b-3",
+        type: "paragraph",
+        text: `This article provides an in-depth analysis of ${postTitle}, exploring key industry trends, tactical execution, and actionable benchmarks.`,
+      },
+      {
+        id: "b-4",
+        type: "heading",
+        level: "h2",
+        text: "2. Key Tactics & Implementation",
+      },
+      {
+        id: "b-5",
+        type: "paragraph",
+        text: "Focusing on search intent, structured data hierarchy, and seamless user experiences ensures maximum reader engagement and optimal AI search visibility.",
+      },
+    ];
+  };
+
+  const initialBlocks = parseOutlineToBlocks(initialPost);
 
   const [postData, setPostData] = useState(initialPostData);
   const [blocks, setBlocks] = useState(initialBlocks);

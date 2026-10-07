@@ -35,6 +35,12 @@ export const initialStudioPosts = [
       { id: "1", level: "h1", title: "This is the blog post title", description: "Introduction" },
       { id: "2", level: "h2", title: "Key Takeaways", description: "Core points" },
     ],
+    blocks: [
+      { id: "b-1", type: "heading", level: "h1", text: "This is the blog post title" },
+      { id: "b-2", type: "paragraph", text: "Welcome to this comprehensive overview exploring essential techniques and practical insights." },
+      { id: "b-3", type: "heading", level: "h2", text: "Key Takeaways" },
+      { id: "b-4", type: "paragraph", text: "Here are the primary action items and strategies designed to improve your store's performance." },
+    ],
     bodyHtml: "<h2>Introduction</h2><p>This is the blog post content draft.</p>",
   },
   {
@@ -55,6 +61,12 @@ export const initialStudioPosts = [
     outline: [
       { id: "1", level: "h1", title: "test", description: "Main overview" },
       { id: "2", level: "h2", title: "Detailed Breakdown", description: "In-depth insights" },
+    ],
+    blocks: [
+      { id: "b-1", type: "heading", level: "h1", text: "test" },
+      { id: "b-2", type: "paragraph", text: "Direct Summary: An optimized informational blog post crafted with structured headings and answers." },
+      { id: "b-3", type: "heading", level: "h2", text: "Detailed Breakdown" },
+      { id: "b-4", type: "paragraph", text: "Detailed breakdown of the core metrics, workflow benchmarks, and conversion opportunities." },
     ],
     bodyHtml: "<div class=\"geo-answer-block\"><p><strong>Direct Summary:</strong> Optimized informational blog post.</p></div><h2>Detailed Breakdown</h2><p>Content published on store.</p>",
   },

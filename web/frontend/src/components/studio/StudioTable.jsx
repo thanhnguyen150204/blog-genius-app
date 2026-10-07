@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Checkbox, Icon } from "@shopify/polaris";
-import { MagicIcon, EditIcon } from "@shopify/polaris-icons";
+import { Checkbox, Icon, Button, InlineStack } from "@shopify/polaris";
+import { MagicIcon, BlogIcon } from "@shopify/polaris-icons";
 import { ArticleActionsMenu } from "./ArticleActionsMenu";
 
 export function StudioTable({
@@ -13,12 +13,25 @@ export function StudioTable({
   onViewPost,
   onDuplicatePost,
   onDeletePost,
+  onBulkPublish,
+  onBulkUnpublish,
+  onBulkEditAuthor,
+  onBulkDelete,
 }) {
   const [hoveredRowId, setHoveredRowId] = useState(null);
 
   const isAllSelected = posts.length > 0 && posts.every((p) => selectedIds.includes(p.id));
   const isPartiallySelected =
     selectedIds.length > 0 && !isAllSelected && posts.some((p) => selectedIds.includes(p.id));
+
+  // Determine whether to show "Publish" or "Unpublish" (never both)
+  const selectedPosts = posts.filter((p) => selectedIds.includes(p.id));
+  const hasDraft = selectedPosts.some((p) => (p.status || "").toLowerCase() === "draft");
+  const hasPublished = selectedPosts.some((p) => (p.status || "").toLowerCase() === "published");
+
+  // If all selected are published -> show "Unpublish", otherwise (all draft or mixed) -> show "Publish"
+  const showUnpublish = hasPublished && !hasDraft;
+  const showPublish = !showUnpublish;
 
   const getTypePillStyle = (type) => {
     switch (type) {
@@ -39,20 +52,53 @@ export function StudioTable({
     }
   };
 
-  const renderStatusPill = (status) => {
+  const renderStatusPill = (status, post) => {
     const s = (status || "").toLowerCase();
+    if (s.includes("generating")) {
+      const progressVal = post?.progress !== undefined ? post.progress : 14;
+      return (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            backgroundColor: "#fef08a",
+            color: "#713f12",
+            border: "none",
+            padding: "3px 12px",
+            borderRadius: "9999px",
+            fontSize: "12px",
+            fontWeight: 400,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span
+            style={{
+              display: "inline-block",
+              width: "11px",
+              height: "11px",
+              border: "2px solid #713f12",
+              borderTopColor: "transparent",
+              borderRadius: "50%",
+              animation: "studioSpin 1s linear infinite",
+            }}
+          />
+          {progressVal}% Generating
+        </span>
+      );
+    }
     if (s === "published") {
       return (
         <span
           style={{
             display: "inline-block",
-            backgroundColor: "#dcfce7",
-            color: "#15803d",
-            border: "1px solid #bbf7d0",
+            backgroundColor: "#a7f3d0",
+            color: "#065f46",
+            border: "none",
             padding: "3px 12px",
             borderRadius: "9999px",
             fontSize: "12px",
-            fontWeight: 500,
+            fontWeight: 400,
             whiteSpace: "nowrap",
           }}
         >
@@ -65,13 +111,13 @@ export function StudioTable({
         <span
           style={{
             display: "inline-block",
-            backgroundColor: "#f4f4f5",
-            color: "#64748b",
-            border: "1px solid #e4e4e7",
+            backgroundColor: "#f1f3f5",
+            color: "#27272a",
+            border: "none",
             padding: "3px 12px",
             borderRadius: "9999px",
             fontSize: "12px",
-            fontWeight: 500,
+            fontWeight: 400,
             whiteSpace: "nowrap",
           }}
         >
@@ -83,13 +129,13 @@ export function StudioTable({
       <span
         style={{
           display: "inline-block",
-          backgroundColor: "#eff6ff",
-          color: "#2563eb",
-          border: "1px solid #bfdbfe",
+          backgroundColor: "#dbeafe",
+          color: "#1e40af",
+          border: "none",
           padding: "3px 12px",
           borderRadius: "9999px",
           fontSize: "12px",
-          fontWeight: 500,
+          fontWeight: 400,
           whiteSpace: "nowrap",
         }}
       >
@@ -137,7 +183,7 @@ export function StudioTable({
 
         <h3
           style={{
-            fontSize: "17px",
+            fontSize: "16px",
             fontWeight: 700,
             color: "#18181b",
             margin: "0 0 8px 0",
@@ -160,53 +206,144 @@ export function StudioTable({
   }
 
   return (
-    <div style={{ width: "100%", overflow: "visible" }}>
+    <div style={{ width: "100%", overflowX: "auto" }}>
       <table
         style={{
           width: "100%",
+          tableLayout: "fixed",
           borderCollapse: "collapse",
           textAlign: "left",
-          fontSize: "13px",
-          tableLayout: "fixed",
+          fontSize: "12.5px",
         }}
       >
         <colgroup>
-          <col style={{ width: "44px" }} />
-          <col style={{ width: "28%" }} />
-          <col style={{ width: "14%" }} />
-          <col style={{ width: "9%" }} />
-          <col style={{ width: "19%" }} />
-          <col style={{ width: "6%" }} />
-          <col style={{ width: "6%" }} />
-          <col style={{ width: "11%" }} />
-          <col style={{ width: "7%" }} />
+          <col style={{ width: "48px" }} />
+          <col style={{ width: "auto" }} />
+          <col style={{ width: "115px" }} />
+          <col style={{ width: "110px" }} />
+          <col style={{ width: "145px" }} />
+          <col style={{ width: "40px" }} />
+          <col style={{ width: "40px" }} />
+          <col style={{ width: "100px" }} />
+          <col style={{ width: "52px" }} />
         </colgroup>
         <thead>
-          <tr
-            style={{
-              borderBottom: "1px solid #e4e4e7",
-              color: "#52525b",
-              fontWeight: 500,
-              backgroundColor: "#ffffff",
-            }}
-          >
-            <th style={{ padding: "12px 12px", textAlign: "center" }}>
-              <Checkbox
-                checked={isAllSelected ? true : isPartiallySelected ? "indeterminate" : false}
-                onChange={onToggleSelectAll}
-                label=""
-                labelHidden
-              />
-            </th>
-            <th style={{ padding: "12px 12px", color: "#52525b", fontWeight: 500, whiteSpace: "nowrap" }}>Title</th>
-            <th style={{ padding: "12px 12px", color: "#52525b", fontWeight: 500, whiteSpace: "nowrap" }}>Type</th>
-            <th style={{ padding: "12px 12px", color: "#52525b", fontWeight: 500, whiteSpace: "nowrap" }}>Author</th>
-            <th style={{ padding: "12px 12px", color: "#52525b", fontWeight: 500, whiteSpace: "nowrap" }}>Last modified</th>
-            <th style={{ padding: "12px 6px", textAlign: "center", color: "#52525b", fontWeight: 500, whiteSpace: "nowrap" }}>SEO</th>
-            <th style={{ padding: "12px 6px", textAlign: "center", color: "#52525b", fontWeight: 500, whiteSpace: "nowrap" }}>GEO</th>
-            <th style={{ padding: "12px 12px", color: "#52525b", fontWeight: 500, whiteSpace: "nowrap" }}>Status</th>
-            <th style={{ padding: "12px 12px", textAlign: "center", color: "#52525b", fontWeight: 500, whiteSpace: "nowrap" }}>Action</th>
-          </tr>
+          {selectedIds.length > 0 ? (
+            /* Bulk Actions Header matching exact frame height & alignment */
+            <tr
+              style={{
+                height: "44px",
+                borderBottom: "1px solid #ebeef2",
+                borderLeft: "3px solid transparent",
+                backgroundColor: "#f7f7f8",
+                animation: "studioHeaderFade 0.15s ease",
+              }}
+            >
+              <th
+                style={{
+                  width: "48px",
+                  height: "44px",
+                  padding: "0 8px 0 16px",
+                  textAlign: "center",
+                  verticalAlign: "middle",
+                }}
+              >
+                <Checkbox
+                  checked={isAllSelected ? true : isPartiallySelected ? "indeterminate" : false}
+                  onChange={onToggleSelectAll}
+                  label=""
+                  labelHidden
+                />
+              </th>
+              <th
+                colSpan="8"
+                style={{
+                  height: "44px",
+                  padding: "0 16px 0 10px",
+                  verticalAlign: "middle",
+                  fontWeight: 400,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    width: "100%",
+                    height: "100%",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      color: "#616161",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {selectedIds.length} selected
+                  </span>
+                  <InlineStack align="end" gap="200" blockAlign="center">
+                    {showPublish && (
+                      <Button size="slim" onClick={onBulkPublish}>
+                        Publish
+                      </Button>
+                    )}
+                    {showUnpublish && (
+                      <Button size="slim" onClick={onBulkUnpublish}>
+                        Unpublish
+                      </Button>
+                    )}
+                    <Button size="slim" onClick={onBulkEditAuthor}>
+                      Edit author
+                    </Button>
+                    <Button size="slim" tone="critical" onClick={onBulkDelete}>
+                      Delete
+                    </Button>
+                  </InlineStack>
+                </div>
+              </th>
+            </tr>
+          ) : (
+            /* Normal Header matching exact frame height & alignment */
+            <tr
+              style={{
+                height: "44px",
+                borderBottom: "1px solid #ebeef2",
+                borderLeft: "3px solid transparent",
+                color: "#52525b",
+                fontSize: "13px",
+                fontWeight: 400,
+                backgroundColor: "#f7f7f8",
+                animation: "studioHeaderFade 0.15s ease",
+              }}
+            >
+              <th
+                style={{
+                  width: "48px",
+                  height: "44px",
+                  padding: "0 8px 0 16px",
+                  textAlign: "center",
+                  verticalAlign: "middle",
+                }}
+              >
+                <Checkbox
+                  checked={isAllSelected ? true : isPartiallySelected ? "indeterminate" : false}
+                  onChange={onToggleSelectAll}
+                  label=""
+                  labelHidden
+                />
+              </th>
+              <th style={{ height: "44px", padding: "0 10px", verticalAlign: "middle", color: "#52525b", fontWeight: 400, whiteSpace: "nowrap" }}>Title</th>
+              <th style={{ height: "44px", padding: "0 8px", verticalAlign: "middle", color: "#52525b", fontWeight: 400, whiteSpace: "nowrap" }}>Type</th>
+              <th style={{ height: "44px", padding: "0 8px", verticalAlign: "middle", color: "#52525b", fontWeight: 400, whiteSpace: "nowrap" }}>Author</th>
+              <th style={{ height: "44px", padding: "0 8px", verticalAlign: "middle", color: "#52525b", fontWeight: 400, whiteSpace: "nowrap" }}>Last modified</th>
+              <th style={{ height: "44px", padding: "0 4px", textAlign: "center", verticalAlign: "middle", color: "#52525b", fontWeight: 400, whiteSpace: "nowrap" }}>SEO</th>
+              <th style={{ height: "44px", padding: "0 4px", textAlign: "center", verticalAlign: "middle", color: "#52525b", fontWeight: 400, whiteSpace: "nowrap" }}>GEO</th>
+              <th style={{ height: "44px", padding: "0 8px", verticalAlign: "middle", color: "#52525b", fontWeight: 400, whiteSpace: "nowrap" }}>Status</th>
+              <th style={{ height: "44px", padding: "0 16px 0 4px", textAlign: "center", verticalAlign: "middle", color: "#52525b", fontWeight: 400, whiteSpace: "nowrap" }}>Action</th>
+            </tr>
+          )}
         </thead>
         <tbody>
           {posts.map((post) => {
@@ -218,24 +355,27 @@ export function StudioTable({
             return (
               <tr
                 key={post.id}
-                onClick={() => onRowClick ? onRowClick(post) : (onEditPost && onEditPost(post))}
+                onClick={() => onToggleSelect(post.id)}
                 onMouseEnter={() => setHoveredRowId(post.id)}
                 onMouseLeave={() => setHoveredRowId(null)}
                 style={{
-                  borderBottom: "1px solid #f1f2f4",
-                  borderLeft: "3.5px solid #f97316",
+                  borderBottom: "1px solid #f4f4f5",
+                  borderLeft: isSelected ? "3px solid #f97316" : "3px solid transparent",
                   cursor: "pointer",
                   backgroundColor: isSelected
-                    ? "#f8fafc"
+                    ? "#fffaf5"
                     : isHovered
-                    ? "#fff9f0"
-                    : "#fffdf9",
-                  transition: "background-color 0.15s ease",
+                    ? "#fafafa"
+                    : "#ffffff",
+                  transition: "all 0.15s ease",
                 }}
               >
                 <td
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ padding: "12px 12px", textAlign: "center", verticalAlign: "middle" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSelect(post.id);
+                  }}
+                  style={{ padding: "0 8px 0 16px", textAlign: "center", verticalAlign: "middle", height: "52px" }}
                 >
                   <Checkbox
                     checked={isSelected}
@@ -245,9 +385,23 @@ export function StudioTable({
                   />
                 </td>
 
-                <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <td style={{ padding: "0 10px", verticalAlign: "middle" }}>
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      cursor: "pointer",
+                      maxWidth: "100%",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onViewPost) onViewPost(post);
+                      else if (onRowClick) onRowClick(post);
+                    }}
+                  >
                     <div
+                      className="studio-lead-icon"
                       style={{
                         width: "18px",
                         height: "18px",
@@ -255,19 +409,29 @@ export function StudioTable({
                         alignItems: "center",
                         justifyContent: "center",
                         flexShrink: 0,
-                        color: isAi ? "#18181b" : "#64748b",
+                        color: "#18181b",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
                       }}
                     >
-                      <Icon source={isAi ? MagicIcon : EditIcon} tone={isAi ? "base" : "subdued"} />
+                      <Icon source={isAi ? MagicIcon : BlogIcon} tone="base" />
                     </div>
                     <span
                       style={{
                         color: "#18181b",
-                        fontWeight: 500,
+                        fontWeight: 400,
                         fontSize: "13px",
                         textDecoration: "none",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
+                        maxWidth: "280px",
+                        letterSpacing: "-0.01em",
                       }}
+                      title={post.title}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "#f97316")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "#18181b")}
                     >
                       {post.title}
                     </span>
@@ -277,9 +441,9 @@ export function StudioTable({
                         style={{
                           backgroundColor: "#f97316",
                           color: "#ffffff",
-                          fontSize: "10px",
+                          fontSize: "9.5px",
                           fontWeight: 700,
-                          padding: "2px 7px",
+                          padding: "1px 6px",
                           borderRadius: "9999px",
                           lineHeight: "12px",
                           letterSpacing: "0.5px",
@@ -292,17 +456,17 @@ export function StudioTable({
                   </div>
                 </td>
 
-                <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                <td style={{ padding: "0 8px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
                   <span
                     style={{
                       display: "inline-block",
                       backgroundColor: typeStyle.bg,
                       color: typeStyle.color,
                       border: `1px solid ${typeStyle.border}`,
-                      padding: "3px 12px",
-                      borderRadius: "8px",
+                      padding: "2px 10px",
+                      borderRadius: "6px",
                       fontSize: "12px",
-                      fontWeight: 500,
+                      fontWeight: 400,
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -310,67 +474,99 @@ export function StudioTable({
                   </span>
                 </td>
 
-                <td style={{ padding: "12px 12px", verticalAlign: "middle", color: "#334155", whiteSpace: "nowrap" }}>
+                <td
+                  style={{
+                    padding: "0 8px",
+                    verticalAlign: "middle",
+                    color: "#3f3f46",
+                    fontSize: "13px",
+                    fontWeight: 400,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: "140px",
+                  }}
+                  title={post.author}
+                >
                   {post.author}
                 </td>
 
-                <td style={{ padding: "12px 12px", verticalAlign: "middle", color: "#475569", whiteSpace: "nowrap" }}>
+                <td
+                  style={{
+                    padding: "0 8px",
+                    verticalAlign: "middle",
+                    color: "#52525b",
+                    fontSize: "12.5px",
+                    fontWeight: 400,
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {post.lastModified}
                 </td>
 
-                <td style={{ padding: "12px 6px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}>
+                <td style={{ padding: "0 4px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}>
                   <div
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      width: "24px",
-                      height: "24px",
+                      width: "22px",
+                      height: "22px",
                       borderRadius: "50%",
                       backgroundColor:
                         post.seoScore !== null && post.seoScore !== undefined
                           ? post.seoScore >= 80
                             ? "#16a34a"
-                            : post.seoScore >= 60
+                            : post.seoScore >= 70
                             ? "#b45309"
+                            : post.seoScore >= 50
+                            ? "#ea580c"
                             : "#dc2626"
-                          : "#334155",
+                          : "#3f3f46",
                       color: "#ffffff",
                       fontSize: "11px",
-                      fontWeight: 700,
+                      fontWeight: 600,
                     }}
                   >
                     {post.seoScore !== null && post.seoScore !== undefined ? post.seoScore : "—"}
                   </div>
                 </td>
 
-                <td style={{ padding: "12px 6px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}>
+                <td style={{ padding: "0 4px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}>
                   <div
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      width: "24px",
-                      height: "24px",
+                      width: "22px",
+                      height: "22px",
                       borderRadius: "50%",
                       backgroundColor:
-                        post.geoScore >= 80 ? "#16a34a" : post.geoScore >= 60 ? "#ea580c" : "#dc2626",
+                        post.geoScore !== null && post.geoScore !== undefined
+                          ? post.geoScore >= 80
+                            ? "#16a34a"
+                            : post.geoScore >= 70
+                            ? "#b45309"
+                            : post.geoScore >= 50
+                            ? "#ea580c"
+                            : "#dc2626"
+                          : "#3f3f46",
                       color: "#ffffff",
                       fontSize: "11px",
-                      fontWeight: 700,
+                      fontWeight: 600,
                     }}
                   >
-                    {post.geoScore}
+                    {post.geoScore !== null && post.geoScore !== undefined ? post.geoScore : "—"}
                   </div>
                 </td>
 
-                <td style={{ padding: "12px 12px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
-                  {renderStatusPill(post.status)}
+                <td style={{ padding: "0 8px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                  {renderStatusPill(post.status, post)}
                 </td>
 
                 <td
                   onClick={(e) => e.stopPropagation()}
-                  style={{ padding: "12px 12px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}
+                  style={{ padding: "0 16px 0 4px", verticalAlign: "middle", textAlign: "center", whiteSpace: "nowrap" }}
                 >
                   <ArticleActionsMenu
                     post={post}
@@ -385,6 +581,30 @@ export function StudioTable({
           })}
         </tbody>
       </table>
+      <style>{`
+        @keyframes studioHeaderFade {
+          from {
+            opacity: 0.85;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        @keyframes studioSpin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .studio-lead-icon {
+          color: #18181b !important;
+        }
+        .studio-lead-icon svg {
+          fill: #18181b !important;
+          color: #18181b !important;
+          stroke: #18181b !important;
+          stroke-width: 0.35px !important;
+          shape-rendering: geometricPrecision;
+        }
+      `}</style>
     </div>
   );
 }

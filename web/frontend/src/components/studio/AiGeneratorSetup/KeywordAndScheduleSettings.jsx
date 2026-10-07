@@ -67,7 +67,7 @@ export function KeywordAndScheduleSettings({
               </svg>
             </span>
             <span style={{ color: "#9e2a2b", fontSize: "12px", fontWeight: 400 }}>
-              Please enter or select at least one keyword
+              Keyword is required!
             </span>
           </div>
         )}

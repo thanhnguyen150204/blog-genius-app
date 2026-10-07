@@ -7,6 +7,7 @@ import {
   Card,
   Button,
   Modal,
+  Banner,
 } from "@shopify/polaris";
 import { ArrowLeftIcon } from "@shopify/polaris-icons";
 import { AiStyleToneSettings } from "./AiStyleToneSettings";
@@ -24,7 +25,7 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
   const [businessDesc, setBusinessDesc] = useState("");
   const [targetCustomer, setTargetCustomer] = useState("");
 
-  const [insertSectionSummary, setInsertSectionSummary] = useState(true);
+  const [insertSectionSummary, setInsertSectionSummary] = useState(false);
 
   const [keywords, setKeywords] = useState([]);
   const [publishDate, setPublishDate] = useState("05 Oct 2026");
@@ -65,7 +66,11 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
 
   const handleGenerateTitle = () => {
     const kwStr = Array.isArray(keywords) ? keywords.join(", ") : (keywords || "");
-    const kw = kwStr.trim() || "Shopify Ecommerce";
+    const kw = kwStr.trim();
+    if (!kw) {
+      setErrors((prev) => ({ ...prev, keywords: true }));
+      return;
+    }
     const sampleTitles = [
       `10 Actionable Strategies to Master ${kw} in 2026`,
       `The Complete Guide to ${kw}: Trends, Best Practices & GEO Optimization`,
@@ -98,6 +103,9 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
     setShowKeywordModal(false);
   };
 
+  const [generatingProgress, setGeneratingProgress] = useState(20);
+  const [generatingStep, setGeneratingStep] = useState("Step 1/3: Analyzing topic & outline...");
+
   const handleGenerate = () => {
     const hasKw = Array.isArray(keywords)
       ? keywords.length > 0
@@ -113,101 +121,331 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
     }
 
     setIsGenerating(true);
+    setGeneratingProgress(20);
+    setGeneratingStep("Step 1/3: Analyzing topic & outline...");
 
-    setTimeout(() => {
-      const generatedPostTitle = title.trim();
-      const kwString = Array.isArray(keywords)
-        ? keywords.join(", ")
-        : keywords || "shopify geo seo";
+    const generatedPostTitle = title.trim();
+    const kwString = Array.isArray(keywords)
+      ? keywords.join(", ")
+      : keywords || "Chat GPT is very good";
 
-      const featuredImgUrl = generateFeaturedImage
-        ? productImage ||
-          "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800&auto=format&fit=crop&q=80"
-        : null;
+    const featuredImgUrl = generateFeaturedImage
+      ? productImage ||
+        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&auto=format&fit=crop&q=80"
+      : null;
 
-      const newPost = {
-        id: `post-${Date.now()}`,
-        title: generatedPostTitle,
-        mode: "ai",
-        isAiGenerated: true,
-        creationMode: "ai",
-        intent: "Informational",
-        type: "Informational",
-        author: "Thành Nguyễn",
-        lastModified: "Just now",
-        isNew: true,
-        seoScore: 92,
-        geoScore: 96,
-        status: "Published",
-        keyword: kwString,
-        hasAnswerBlock: insertSectionSummary,
-        hasFaqSchema: true,
-        featuredImage: featuredImgUrl,
-        featuredImagePrompt: generateFeaturedImage ? featuredImagePrompt : "",
-        featuredImageQuality: generateFeaturedImage ? featuredImageQuality : "Medium",
-        outline:
-          typeof outline === "string" && outline.trim()
-            ? outline
-                .replace(/<p><br><\/p>/g, "")
-                .split(/<\/(?:h2|h3|h4|p|li)>/i)
-                .map((seg) => seg.replace(/<[^>]*>/g, "").trim())
-                .filter(Boolean)
-                .map((line, idx) => ({
-                  id: String(idx + 1),
-                  level: "h2",
-                  title: line.replace(/^(Heading \d:\s*|•\s*)/i, "").trim(),
-                  description: "Custom section",
-                }))
-            : Array.isArray(outline) && outline.length > 0
-            ? outline
-            : [
-                {
-                  id: "1",
-                  level: "h1",
-                  title: generatedPostTitle,
-                  description: "Overview & Direct Answer Block",
-                },
-                {
-                  id: "2",
-                  level: "h2",
-                  title: "1. Core Principles and Fundamentals",
-                  description: "In-depth insights",
-                },
-                {
-                  id: "3",
-                  level: "h2",
-                  title: "2. Strategic Implementation Checklist",
-                  description: "Actionable roadmap",
-                },
-                {
-                  id: "4",
-                  level: "h2",
-                  title: "3. Frequently Asked Questions",
-                  description: "FAQ Schema block",
-                },
-              ],
-        bodyHtml:
-          typeof outline === "string" && outline.trim().startsWith("<")
-            ? `
-              <div class="geo-answer-block">
-                <p><strong>Direct Summary:</strong> ${generatedPostTitle} provides an authoritative framework engineered for Google AI Overviews and Perplexity citations with structured FAQ Schema and Answer Blocks.</p>
-              </div>
-              ${outline}
-            `
-            : `
-              <div class="geo-answer-block">
-                <p><strong>Direct Summary:</strong> ${generatedPostTitle} provides an authoritative framework engineered for Google AI Overviews and Perplexity citations with structured FAQ Schema and Answer Blocks.</p>
-              </div>
-              <h2>1. Core Principles and Fundamentals</h2>
-              <p>This article explores comprehensive methodologies tailored to maximize both conventional search CTR and generative citation rate.</p>
-              <h2>2. Strategic Implementation Checklist</h2>
-              <p>Follow these proven steps to streamline your ecommerce content production and audit readiness.</p>
-            `,
+    const isChatGPT = /chat\s*gpt|ai|gpt|llm|openai|claude|gemini/i.test(generatedPostTitle);
+
+    const parseOutlineStringToBlocks = (outlineInput, postTitle, kwStr, withSummary) => {
+      let rawBlocks = [];
+      let bIdx = 1;
+
+      const formatCombinedParagraph = (lines) => {
+        if (!lines || lines.length === 0) return "";
+        return lines
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((s) => (/[.!?]$/.test(s) ? s : `${s}.`))
+          .join(" ");
       };
 
+      if (typeof outlineInput === "string" && outlineInput.trim()) {
+        const outlineStr = outlineInput.trim();
+        if (outlineStr.includes("<")) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(outlineStr, "text/html");
+          const elements = doc.body.childNodes;
+          let currentLines = [];
+
+          const flushLines = () => {
+            const combined = formatCombinedParagraph(currentLines);
+            if (combined) {
+              rawBlocks.push({
+                id: `b-${bIdx++}`,
+                type: "paragraph",
+                text: combined,
+              });
+            }
+            currentLines = [];
+          };
+
+          elements.forEach((node) => {
+            const tag = node.nodeName?.toLowerCase();
+            const text = (node.textContent || "").trim();
+            if (!text) return;
+            if (tag === "h1" || tag === "h2" || tag === "h3") {
+              flushLines();
+              rawBlocks.push({
+                id: `b-${bIdx++}`,
+                type: "heading",
+                level: tag,
+                text: text,
+              });
+            } else if (tag === "ul" || tag === "ol") {
+              node.querySelectorAll("li").forEach((li) => {
+                const liText = (li.textContent || "").trim();
+                if (liText) {
+                  currentLines.push(liText);
+                }
+              });
+            } else if (tag === "li" || tag === "p") {
+              currentLines.push(text);
+            }
+          });
+          flushLines();
+        } else {
+          const lines = outlineStr.split("\n");
+          let currentLines = [];
+
+          const flushLines = () => {
+            const combined = formatCombinedParagraph(currentLines);
+            if (combined) {
+              rawBlocks.push({
+                id: `b-${bIdx++}`,
+                type: "paragraph",
+                text: combined,
+              });
+            }
+            currentLines = [];
+          };
+
+          lines.forEach((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) return;
+            if (trimmed.toLowerCase().startsWith("heading 1:") || trimmed.startsWith("# ")) {
+              flushLines();
+              rawBlocks.push({
+                id: `b-${bIdx++}`,
+                type: "heading",
+                level: "h1",
+                text: trimmed.replace(/^(heading 1:\s*|#\s*)/i, "").trim(),
+              });
+            } else if (trimmed.toLowerCase().startsWith("heading 2:") || trimmed.startsWith("## ")) {
+              flushLines();
+              rawBlocks.push({
+                id: `b-${bIdx++}`,
+                type: "heading",
+                level: "h2",
+                text: trimmed.replace(/^(heading 2:\s*|##\s*)/i, "").trim(),
+              });
+            } else if (trimmed.toLowerCase().startsWith("heading 3:") || trimmed.startsWith("### ")) {
+              flushLines();
+              rawBlocks.push({
+                id: `b-${bIdx++}`,
+                type: "heading",
+                level: "h3",
+                text: trimmed.replace(/^(heading 3:\s*|###\s*)/i, "").trim(),
+              });
+            } else {
+              currentLines.push(trimmed.replace(/^[•\-\*]\s*/, "").trim());
+            }
+          });
+          flushLines();
+        }
+      } else if (Array.isArray(outlineInput) && outlineInput.length > 0) {
+        outlineInput.forEach((item) => {
+          rawBlocks.push({
+            id: `b-${bIdx++}`,
+            type: "heading",
+            level: item.level || "h2",
+            text: item.title || item.text || "Heading",
+          });
+          if (item.description || item.body) {
+            rawBlocks.push({
+              id: `b-${bIdx++}`,
+              type: "paragraph",
+              text: item.description || item.body,
+            });
+          }
+        });
+      }
+
+      if (rawBlocks.length > 0) {
+        const hasH1 = rawBlocks.some((b) => b.type === "heading" && b.level === "h1");
+        if (!hasH1 && postTitle) {
+          rawBlocks.unshift({
+            id: `b-h1-main`,
+            type: "heading",
+            level: "h1",
+            text: postTitle,
+          });
+        }
+
+        return rawBlocks;
+      }
+
+      if (isChatGPT) {
+        return [
+          {
+            id: "b-1",
+            type: "heading",
+            level: "h1",
+            text: postTitle || "The Case for Chat GPT: A Pragmatic Claim Worth Testing",
+          },
+          {
+            id: "b-2",
+            type: "heading",
+            level: "h2",
+            text: 'What "Very Good" Means in Practical Terms: Accuracy, Speed, Breadth, Cost',
+          },
+          {
+            id: "b-3",
+            type: "paragraph",
+            text: 'When you say Chat GPT is "very good," you\'re not making a vague marketing claim—you\'re describing measurable performance across four dimensions that matter in real work. Accuracy means the output matches your intent closely enough that revision time drops by half or more. Speed means seconds instead of hours for first drafts, research summaries, or code snippets. Breadth means one tool handles customer emails, technical documentation, brainstorming sessions, and data analysis without switching platforms. Cost means you pay pennies per task compared to hiring specialists or subscribing to niche software for every job.',
+          },
+          {
+            id: "b-4",
+            type: "paragraph",
+            text: "Consider a content marketer drafting ten social posts. Chat GPT delivers all ten in under two minutes, each tailored to platform character limits and tone guidelines. That speed-cost combination is observable ROI compounding weekly across publishing workflows.",
+          },
+          {
+            id: "b-5",
+            type: "heading",
+            level: "h2",
+            text: "Where Chat GPT Reliably Excels Today: Patterns and Task Archetypes",
+          },
+          {
+            id: "b-6",
+            type: "paragraph",
+            text: "Chat GPT consistently outperforms alternatives in pattern-heavy, high-repetition workflows: transforming raw notes into clean meeting summaries, generating boilerplate API wrappers, and scaffolding test cases across complex codebases.",
+          },
+          {
+            id: "b-7",
+            type: "heading",
+            level: "h2",
+            text: "How to Measure Value: Outcome-Based Benchmarks Over Hype",
+          },
+          {
+            id: "b-8",
+            type: "paragraph",
+            text: "Measure outcomes rather than hype: hours saved, revision iterations, and baseline cost reduction. Setting a structured evaluation pilot clarifies where generative tools provide definitive competitive advantage.",
+          },
+        ];
+      }
+
+      return [
+        {
+          id: "b-1",
+          type: "heading",
+          level: "h1",
+          text: postTitle || "2026’s Big Shift: Practical, Planet-First Fashion for Mother and Baby",
+        },
+        {
+          id: "b-2",
+          type: "heading",
+          level: "h2",
+          text: "Data-backed drivers: climate volatility, stricter safety standards, and time-poor parenting",
+        },
+        {
+          id: "b-3",
+          type: "paragraph",
+          text: "Modern families in 2026 demand apparel that balances sustainable ethics with ruthless daily practicality. As climate patterns fluctuate and safety certifications become non-negotiable, aesthetics now firmly follow function in Mother and Baby wear.",
+        },
+        {
+          id: "b-4",
+          type: "heading",
+          level: "h2",
+          text: "Skin-Safe, Sustainable Materials That Dominate 2026 Collections",
+        },
+        {
+          id: "b-5",
+          type: "paragraph",
+          text: "Bio-based fibers including TENCEL Lyocell, certified organic cotton, and refined hemp lead the market. Coupled with plant-derived, low-tox dyes, these fabrics protect delicate infant skin without harsh chemical residues.",
+        },
+        {
+          id: "b-6",
+          type: "heading",
+          level: "h2",
+          text: "Smart Textiles Enter Daily Wear: Sensible Upgrades, Not Gimmicks",
+        },
+        {
+          id: "b-7",
+          type: "paragraph",
+          text: "Temperature-regulating micro-knits and UPF 50+ stroller textiles shield newborns during heatwaves. Parents increasingly prioritize washable smart components verified with strict privacy safeguards.",
+        },
+        {
+          id: "b-8",
+          type: "heading",
+          level: "h2",
+          text: "Postpartum-Ready Fits and Nursing-First Design That Look Polished",
+        },
+        {
+          id: "b-9",
+          type: "paragraph",
+          text: "Invisible nursing access—powered by whisper-quiet magnetic clasps, low-profile hidden zippers, and crossover wrap fronts—allows mothers to feel chic and work-ready without feeling confined to traditional maternity wear.",
+        },
+      ];
+    };
+
+    const generatedBlocks = parseOutlineStringToBlocks(
+      outline,
+      generatedPostTitle,
+      kwString,
+      insertSectionSummary
+    );
+
+    const generatedPost = {
+      id: `post-${Date.now()}`,
+      title: generatedPostTitle,
+      mode: "ai",
+      isAiGenerated: true,
+      creationMode: "ai",
+      intent: "Informational",
+      type: "Informational",
+      author: "AI Assistant",
+      lastModified: "Oct 7, 2026, 08:57 PM",
+      isNew: true,
+      seoScore: 78,
+      geoScore: 70,
+      status: "Draft",
+      keyword: kwString,
+      tags: "AI, Technology, Generative AI",
+      hasAnswerBlock: insertSectionSummary,
+      hasFaqSchema: true,
+      featuredImage: featuredImgUrl,
+      imageAlt: generatedPostTitle,
+      imageScope: "All devices",
+      imageSize: "original",
+      excerpt: `A pragmatic, in-depth evaluation of ${generatedPostTitle} exploring real-world performance, speed, cost, and workflow benchmarks.`,
+      seoTitle: generatedPostTitle,
+      metaDescription: `Discover why ${generatedPostTitle} with measurable benchmarks on speed, accuracy, cost-efficiency, and outcome-driven results.`,
+      handle: generatedPostTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      tableOfContents: {
+        enabled: true,
+        title: "Table of Contents",
+        textColor: "#2563eb",
+        listStyle: "none",
+        indentation: "hierarchical",
+        layout: "1-col",
+        collapsible: false,
+        excludedHeadingTypes: [],
+      },
+      blocks: generatedBlocks,
+      outline: generatedBlocks
+        .filter((b) => b.type === "heading")
+        .map((b, idx) => ({
+          id: String(idx + 1),
+          level: b.level || "h2",
+          title: b.text,
+          description: "Section",
+        })),
+    };
+
+    setTimeout(() => {
       setIsGenerating(false);
-      onCompleteGeneration(newPost);
-    }, 1200);
+      onCompleteGeneration(generatedPost);
+    }, 1800);
+  };
+
+  const handleOutlineValidationError = () => {
+    const hasKw = Array.isArray(keywords)
+      ? keywords.length > 0
+      : Boolean(keywords && keywords.trim());
+    const hasTitle = Boolean(title && title.trim());
+    setErrors({
+      keywords: !hasKw,
+      title: !hasTitle,
+    });
   };
 
   return (
@@ -304,7 +542,10 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
               onFeaturedImageQualityChange={setFeaturedImageQuality}
               onGenerate={handleGenerate}
               isGenerating={isGenerating}
+              generatingProgress={generatingProgress}
+              generatingStep={generatingStep}
               error={errors.title}
+              onOutlineValidationError={handleOutlineValidationError}
             />
           </BlockStack>
         </Card>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Icon, TextField } from "@shopify/polaris";
+import { Button, Icon, TextField } from "@shopify/polaris";
 import { SearchIcon } from "@shopify/polaris-icons";
 import { STATUS_TABS } from "../../mock/studioData";
 
@@ -101,27 +101,13 @@ export function StudioTableSubNav({
         })}
       </div>
 
-      {/* Right side: search button matching sample image */}
+      {/* Right side: standard Polaris Search button matching sample image */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <button
-          type="button"
+        <Button
+          icon={SearchIcon}
           onClick={() => setShowSearchInput(true)}
-          title="Search content"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "32px",
-            height: "32px",
-            borderRadius: "8px",
-            border: "1px solid #e4e4e7",
-            backgroundColor: "#ffffff",
-            cursor: "pointer",
-            transition: "all 0.15s ease",
-          }}
-        >
-          <Icon source={SearchIcon} tone="subdued" />
-        </button>
+          accessibilityLabel="Search"
+        />
       </div>
     </div>
   );

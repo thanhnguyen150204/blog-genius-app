@@ -1,7 +1,7 @@
 import { BlockStack, Text } from "@shopify/polaris";
 
 export function TypeSpecificSettingsCard({
-  insertSectionSummary = true,
+  insertSectionSummary = false,
   onToggleSectionSummary,
 }) {
   return (
