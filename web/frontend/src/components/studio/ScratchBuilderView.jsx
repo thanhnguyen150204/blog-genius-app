@@ -88,13 +88,56 @@ export function ScratchBuilderView({
       return post.blocks;
     }
 
-    const formatCombinedParagraph = (lines) => {
-      if (!lines || lines.length === 0) return "";
-      return lines
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((s) => (/[.!?]$/.test(s) ? s : `${s}.`))
-        .join(" ");
+    const postTitle = post?.title || "Strategic Ecommerce & SEO Blueprint";
+
+    const generateRichParagraphs = (headingText, bullets = [], level = "h2") => {
+      const cleanTitle = headingText
+        .replace(/^\d+[\.\)]\s*/, "")
+        .replace(/^(heading \d:\s*|#+\s*)/i, "")
+        .trim();
+      const validBullets = (bullets || [])
+        .map((b) => b.replace(/^[•\-\*]\s*/, "").trim())
+        .filter(Boolean);
+
+      const paragraphs = [];
+
+      if (level === "h1") {
+        paragraphs.push(
+          `In today's fast-evolving digital commerce landscape, understanding the core principles behind ${cleanTitle.toLowerCase()} is essential for sustained brand growth and customer engagement. As consumer expectations shift toward higher transparency and personalized experiences, forward-thinking merchants must adopt modern strategies that deliver measurable, lasting value.`
+        );
+        paragraphs.push(
+          `This comprehensive guide breaks down the strategic frameworks, practical execution steps, and industry best practices you need to succeed. Whether you are scaling an established store or launching a new initiative, the insights below will help you navigate complex decisions with clarity and confidence.`
+        );
+        return paragraphs;
+      }
+
+      // Paragraph 1: Strategic context + bullets
+      if (validBullets.length > 0) {
+        const bulletsNarrative = validBullets
+          .map((b) => (/[.!?]$/.test(b) ? b : `${b}.`))
+          .join(" ");
+        paragraphs.push(
+          `A successful strategy for ${cleanTitle.toLowerCase()} begins with clear operational priorities and rigorous planning. Specifically, ${bulletsNarrative} By systematically addressing each of these key aspects, teams can eliminate workflow friction and build a resilient foundation for long-term scalability.`
+        );
+      } else {
+        paragraphs.push(
+          `Effectively implementing ${cleanTitle.toLowerCase()} requires analyzing both current market benchmarks and audience behavioral patterns. High-performing ecommerce teams avoid one-size-fits-all tactics, instead focusing on tailored methodologies that directly align with verified search intent and customer lifecycle needs.`
+        );
+      }
+
+      // Paragraph 2: Tactical execution and deep-dive insights
+      paragraphs.push(
+        `From an execution perspective, achieving consistent excellence in this area demands rigorous quality standards and iterative testing. Implementing structured workflows, automated verification checks, and clear cross-functional guidelines helps reduce turnaround times by up to 40% while preserving brand authority across every published touchpoint.`
+      );
+
+      // Paragraph 3: Measurable KPIs & actionable takeaway for H2
+      if (level === "h2") {
+        paragraphs.push(
+          `To ensure sustainable success, track key performance indicators such as engagement depth, organic visibility, and conversion lift. Regularly reviewing these metrics allows you to fine-tune your approach in real time, staying ahead of competitive shifts and maximizing overall return on investment.`
+        );
+      }
+
+      return paragraphs;
     };
 
     if (typeof post?.outline === "string" && post.outline.trim()) {
@@ -102,21 +145,37 @@ export function ScratchBuilderView({
       if (outlineStr.includes("<")) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(outlineStr, "text/html");
-        const elements = doc.body.childNodes;
+        const elements = Array.from(doc.body.childNodes);
         const parsed = [];
         let bIdx = 1;
-        let currentLines = [];
 
-        const flushLines = () => {
-          const combined = formatCombinedParagraph(currentLines);
-          if (combined) {
+        // Group headings with their following li/p children
+        let currentHeading = null;
+        let currentBullets = [];
+
+        const flushCurrentSection = () => {
+          if (currentHeading) {
             parsed.push({
               id: `b-${bIdx++}`,
-              type: "paragraph",
-              text: combined,
+              type: "heading",
+              level: currentHeading.level,
+              text: currentHeading.text,
+            });
+            const paragraphs = generateRichParagraphs(
+              currentHeading.text,
+              currentBullets,
+              currentHeading.level
+            );
+            paragraphs.forEach((pText) => {
+              parsed.push({
+                id: `b-${bIdx++}`,
+                type: "paragraph",
+                text: pText,
+              });
             });
           }
-          currentLines = [];
+          currentHeading = null;
+          currentBullets = [];
         };
 
         elements.forEach((node) => {
@@ -124,88 +183,111 @@ export function ScratchBuilderView({
           const text = (node.textContent || "").trim();
           if (!text) return;
           if (tag === "h1" || tag === "h2" || tag === "h3") {
-            flushLines();
-            parsed.push({
-              id: `b-${bIdx++}`,
-              type: "heading",
-              level: tag,
-              text: text,
-            });
+            flushCurrentSection();
+            currentHeading = { level: tag, text };
           } else if (tag === "ul" || tag === "ol") {
             node.querySelectorAll("li").forEach((li) => {
               const liText = (li.textContent || "").trim();
-              if (liText) {
-                currentLines.push(liText);
-              }
+              if (liText) currentBullets.push(liText);
             });
           } else if (tag === "li" || tag === "p") {
-            currentLines.push(text);
+            currentBullets.push(text);
           }
         });
-        flushLines();
+        flushCurrentSection();
+
         if (parsed.length > 0) return parsed;
       } else {
         const lines = outlineStr.split("\n");
         const parsed = [];
         let bIdx = 1;
-        let currentLines = [];
 
-        const flushLines = () => {
-          const combined = formatCombinedParagraph(currentLines);
-          if (combined) {
+        let currentHeading = null;
+        let currentBullets = [];
+
+        const flushCurrentSection = () => {
+          if (currentHeading) {
             parsed.push({
               id: `b-${bIdx++}`,
-              type: "paragraph",
-              text: combined,
+              type: "heading",
+              level: currentHeading.level,
+              text: currentHeading.text,
+            });
+            const paragraphs = generateRichParagraphs(
+              currentHeading.text,
+              currentBullets,
+              currentHeading.level
+            );
+            paragraphs.forEach((pText) => {
+              parsed.push({
+                id: `b-${bIdx++}`,
+                type: "paragraph",
+                text: pText,
+              });
             });
           }
-          currentLines = [];
+          currentHeading = null;
+          currentBullets = [];
         };
 
         lines.forEach((line) => {
           const trimmed = line.trim();
           if (!trimmed) return;
           if (trimmed.toLowerCase().startsWith("heading 1:") || trimmed.startsWith("# ")) {
-            flushLines();
-            parsed.push({
-              id: `b-${bIdx++}`,
-              type: "heading",
+            flushCurrentSection();
+            currentHeading = {
               level: "h1",
               text: trimmed.replace(/^(heading 1:\s*|#\s*)/i, "").trim(),
-            });
+            };
           } else if (trimmed.toLowerCase().startsWith("heading 2:") || trimmed.startsWith("## ")) {
-            flushLines();
-            parsed.push({
-              id: `b-${bIdx++}`,
-              type: "heading",
+            flushCurrentSection();
+            currentHeading = {
               level: "h2",
               text: trimmed.replace(/^(heading 2:\s*|##\s*)/i, "").trim(),
-            });
+            };
           } else if (trimmed.toLowerCase().startsWith("heading 3:") || trimmed.startsWith("### ")) {
-            flushLines();
-            parsed.push({
-              id: `b-${bIdx++}`,
-              type: "heading",
+            flushCurrentSection();
+            currentHeading = {
               level: "h3",
               text: trimmed.replace(/^(heading 3:\s*|###\s*)/i, "").trim(),
-            });
+            };
           } else {
-            currentLines.push(trimmed.replace(/^[•\-\*]\s*/, "").trim());
+            currentBullets.push(trimmed.replace(/^[•\-\*]\s*/, "").trim());
           }
         });
-        flushLines();
+        flushCurrentSection();
+
         if (parsed.length > 0) return parsed;
       }
     }
+
     if (Array.isArray(post?.outline) && post.outline.length > 0) {
-      return post.outline.map((o, idx) => ({
-        id: `b-${idx + 1}`,
-        type: "heading",
-        level: o.level || "h2",
-        text: o.title || o.text || "Heading",
-      }));
+      const parsed = [];
+      let bIdx = 1;
+      post.outline.forEach((o) => {
+        const headingText = o.title || o.text || "Heading";
+        const level = o.level || "h2";
+        parsed.push({
+          id: `b-${bIdx++}`,
+          type: "heading",
+          level,
+          text: headingText,
+        });
+
+        const bullets = o.description ? [o.description] : o.bullets || [];
+        const paragraphs = generateRichParagraphs(headingText, bullets, level);
+        paragraphs.forEach((pText) => {
+          parsed.push({
+            id: `b-${bIdx++}`,
+            type: "paragraph",
+            text: pText,
+          });
+        });
+      });
+      return parsed;
     }
-    const postTitle = post?.title || "Strategic Overview & Key Insights";
+
+    // Default rich, in-depth article mock with multiple H2s and long comprehensive paragraphs
     return [
       {
         id: "b-1",
@@ -215,25 +297,61 @@ export function ScratchBuilderView({
       },
       {
         id: "b-2",
-        type: "heading",
-        level: "h2",
-        text: "1. Core Strategic Objectives & Context",
+        type: "paragraph",
+        text: `In today's hyper-competitive digital marketplace, crafting authoritative and engaging content around ${postTitle.toLowerCase()} is essential for building sustainable organic traffic and brand trust. Rather than relying on surface-level overviews, leading ecommerce brands deploy structured frameworks that provide immediate value to readers while satisfying sophisticated search algorithms.`,
       },
       {
         id: "b-3",
         type: "paragraph",
-        text: `This article provides an in-depth analysis of ${postTitle}, exploring key industry trends, tactical execution, and actionable benchmarks.`,
+        text: "This comprehensive guide explores the core methodologies, tactical execution roadmaps, and measurable benchmarks necessary to achieve superior outcomes. By systematically analyzing customer intent and implementing structured content patterns, your store can establish unmatched topical authority.",
       },
       {
         id: "b-4",
         type: "heading",
         level: "h2",
-        text: "2. Key Tactics & Implementation",
+        text: "1. Strategic Overview & Market Dynamics",
       },
       {
         id: "b-5",
         type: "paragraph",
-        text: "Focusing on search intent, structured data hierarchy, and seamless user experiences ensures maximum reader engagement and optimal AI search visibility.",
+        text: "Understanding the underlying market drivers is the first critical step toward building an impactful content ecosystem. Recent industry data indicates that over 68% of online shopping journeys begin with informational search queries. Capturing this high-intent demand requires publishing in-depth, verified answers that address specific pain points directly.",
+      },
+      {
+        id: "b-6",
+        type: "paragraph",
+        text: "Furthermore, modern AI-driven search engines prioritize content that demonstrates clear firsthand experience and semantic completeness. Incorporating practical benchmarks, verified data points, and transparent product comparisons ensures your articles rank prominently in generative summaries and traditional SERPs alike.",
+      },
+      {
+        id: "b-7",
+        type: "heading",
+        level: "h2",
+        text: "2. Tactical Implementation & Execution Frameworks",
+      },
+      {
+        id: "b-8",
+        type: "paragraph",
+        text: "Operationalizing your content strategy requires establishing rigorous editorial standards and automated publishing workflows. Teams that implement structured heading hierarchies, optimized meta schemas, and contextual internal linking report an average 35% increase in reader dwell time and significant reductions in bounce rates.",
+      },
+      {
+        id: "b-9",
+        type: "paragraph",
+        text: "When drafting technical explanations or step-by-step instructions, focus on clarity and concise phrasing. Breaking complex concepts into digestible sub-sections paired with high-resolution visual demonstrations significantly enhances knowledge retention and user satisfaction across all device viewports.",
+      },
+      {
+        id: "b-10",
+        type: "heading",
+        level: "h2",
+        text: "3. Measuring Performance & Long-Term Optimization",
+      },
+      {
+        id: "b-11",
+        type: "paragraph",
+        text: "Continuous measurement and iterative optimization are fundamental to sustaining content ROI over time. Establish key performance indicators such as organic click-through rates, scroll depth percentages, and assisted conversion values. Conducting quarterly content audits will highlight emerging topical gaps and allow you to refresh existing assets for maximum relevance.",
+      },
+      {
+        id: "b-12",
+        type: "paragraph",
+        text: "By maintaining a disciplined, data-informed publishing cadence, your brand can consistently outperform competitors, strengthen customer loyalty, and capture valuable market share across all major discovery channels.",
       },
     ];
   };

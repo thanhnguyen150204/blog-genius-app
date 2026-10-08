@@ -7,7 +7,6 @@ export function NavigationMenuShopify() {
       <Link to="/" rel="home">BlogGenius</Link>
       <Link to="/studio">Content Studio</Link>
       <Link to="/keywords">Keywords</Link>
-      <Link to="/feature-request">Feature request</Link>
       <Link to="/pricing">Pricing</Link>
       <Link to="/settings">Settings</Link>
     </NavMenu>

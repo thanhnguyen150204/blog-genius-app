@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Tag, Text, Checkbox, BlockStack } from "@shopify/polaris";
+import { getSavedKeywords, addSavedKeyword } from "../../../utils/savedKeywordsStorage";
 
 export function KeywordTagCombobox({
   tags = [],
@@ -8,22 +9,55 @@ export function KeywordTagCombobox({
 }) {
   const [inputText, setInputText] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [savedKeywords, setSavedKeywords] = useState(getSavedKeywords);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Normalize active tags to array of strings
-  const currentTags = Array.isArray(tags)
-    ? tags
-    : typeof tags === "string" && tags.trim()
-    ? tags.split(",").map((t) => t.trim()).filter(Boolean)
-    : [];
+  // Sync with saved keywords storage updates
+  useEffect(() => {
+    const handleStorageUpdate = (e) => {
+      if (Array.isArray(e.detail)) {
+        setSavedKeywords(e.detail);
+      } else {
+        setSavedKeywords(getSavedKeywords());
+      }
+    };
+    window.addEventListener("saved_keywords_updated", handleStorageUpdate);
+    return () => {
+      window.removeEventListener("saved_keywords_updated", handleStorageUpdate);
+    };
+  }, []);
 
-  // Toggle/remove keyword when unchecked
+  // Normalize active tags to array of strings
+  const currentTags = useMemo(() => {
+    return Array.isArray(tags)
+      ? tags
+      : typeof tags === "string" && tags.trim()
+      ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+      : [];
+  }, [tags]);
+
+  // Combined pool of keywords (saved + currently selected)
+  const allAvailableKeywords = useMemo(() => {
+    const set = new Set([...currentTags, ...savedKeywords]);
+    return Array.from(set);
+  }, [currentTags, savedKeywords]);
+
+  // Toggle keyword checked/unchecked in active post selection
   const handleToggleKeyword = useCallback(
     (kw) => {
-      // Unchecking removes it completely from the list
-      const nextTags = currentTags.filter((t) => t !== kw);
-      onChange(nextTags);
+      const isSelected = currentTags.some(
+        (t) => t.toLowerCase() === kw.toLowerCase()
+      );
+      if (isSelected) {
+        const nextTags = currentTags.filter(
+          (t) => t.toLowerCase() !== kw.toLowerCase()
+        );
+        onChange(nextTags);
+      } else {
+        const nextTags = [...currentTags, kw];
+        onChange(nextTags);
+      }
       inputRef.current?.focus();
     },
     [currentTags, onChange]
@@ -35,10 +69,11 @@ export function KeywordTagCombobox({
       const trimmed = (newKw || "").trim();
       if (!trimmed) return;
 
-      if (!currentTags.includes(trimmed)) {
+      if (!currentTags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
         const nextTags = [...currentTags, trimmed];
         onChange(nextTags);
       }
+      addSavedKeyword(trimmed);
 
       setInputText("");
       inputRef.current?.focus();
@@ -82,13 +117,15 @@ export function KeywordTagCombobox({
     };
   }, []);
 
-  // Filter currentTags by query if typing
+  // Filter available keywords by query if typing
   const query = inputText.trim().toLowerCase();
-  const visibleKeywords = query
-    ? currentTags.filter((kw) => kw.toLowerCase().includes(query))
-    : currentTags;
+  const visibleKeywords = useMemo(() => {
+    return query
+      ? allAvailableKeywords.filter((kw) => kw.toLowerCase().includes(query))
+      : allAvailableKeywords;
+  }, [query, allAvailableKeywords]);
 
-  const isExactMatch = currentTags.some(
+  const isExactMatch = allAvailableKeywords.some(
     (kw) => kw.toLowerCase() === query
   );
 
@@ -216,7 +253,9 @@ export function KeywordTagCombobox({
                   >
                     <Checkbox
                       label={kw}
-                      checked={true}
+                      checked={currentTags.some(
+                        (t) => t.toLowerCase() === kw.toLowerCase()
+                      )}
                       onChange={() => handleToggleKeyword(kw)}
                     />
                   </div>

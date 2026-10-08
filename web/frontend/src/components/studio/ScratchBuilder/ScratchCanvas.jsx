@@ -161,29 +161,26 @@ export function ScratchCanvas({
     switch (viewport) {
       case "mobile":
         return {
-          width: "420px",
-          maxWidth: "420px",
+          width: "100%",
+          maxWidth: "440px",
           padding: "24px 16px 96px 16px",
-          titleFontSize: "22px",
-          imageHeight: "260px",
+          titleFontSize: "24px",
           blockGap: "16px",
         };
       case "tablet":
         return {
-          width: "768px",
+          width: "100%",
           maxWidth: "768px",
-          padding: "36px 32px 96px 32px",
-          titleFontSize: "27px",
-          imageHeight: "380px",
+          padding: "32px 28px 96px 28px",
+          titleFontSize: "32px",
           blockGap: "20px",
         };
       default: // desktop
         return {
-          width: "1000px",
-          maxWidth: "1000px",
-          padding: "48px 56px 96px 56px",
-          titleFontSize: "34px",
-          imageHeight: "480px",
+          width: "100%",
+          maxWidth: "100%",
+          padding: "36px 48px 96px 48px",
+          titleFontSize: "32px",
           blockGap: "24px",
         };
     }
@@ -258,10 +255,12 @@ export function ScratchCanvas({
                 overflow: "hidden",
                 border: "1px solid #e4e4e7",
                 textAlign: "center",
-                height: canvasConfig.imageHeight,
+                width: "100%",
+                aspectRatio: "16 / 9",
+                backgroundColor: "#f4f4f5",
                 transform: "translateZ(0)",
-                willChange: "height",
-                transition: "height 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
+                willChange: "aspect-ratio",
+                transition: "all 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
               }}
             >
               <img

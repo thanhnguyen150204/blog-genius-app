@@ -15,6 +15,7 @@ import { BusinessContextCard } from "./BusinessContextCard";
 import { TypeSpecificSettingsCard } from "./TypeSpecificSettingsCard";
 import { KeywordAndScheduleSettings } from "./KeywordAndScheduleSettings";
 import { PostTitleAndOutlineSettings } from "./PostTitleAndOutlineSettings";
+import { getSavedKeywords } from "../../../utils/savedKeywordsStorage";
 
 export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
   const [language, setLanguage] = useState("English(US)");
@@ -82,13 +83,20 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
     setErrors((prev) => ({ ...prev, title: false }));
   };
 
+  const savedPool = getSavedKeywords();
   const suggestedKeywords = [
+    ...savedPool.map((kw) => ({
+      kw,
+      volume: "3.5K/mo",
+      kd: "Low",
+    })),
+    { kw: "Mother and baby care", volume: "8.2K/mo", kd: "Low" },
+    { kw: "organic baby clothes online", volume: "5.4K/mo", kd: "Low" },
+    { kw: "safe baby skincare products", volume: "4.1K/mo", kd: "Medium" },
+    { kw: "postpartum essentials for moms", volume: "6.8K/mo", kd: "Low" },
+    { kw: "maternity fashion trends 2026", volume: "3.9K/mo", kd: "Low" },
     { kw: "shopify seo guide 2026", volume: "4.5K/mo", kd: "Low" },
-    { kw: "generative engine optimization shopify", volume: "2.8K/mo", kd: "Medium" },
-    { kw: "how to write ai blog posts", volume: "6.2K/mo", kd: "Low" },
-    { kw: "best ecommerce blogging strategies", volume: "3.1K/mo", kd: "Low" },
-    { kw: "shopify answer block schema", volume: "1.2K/mo", kd: "Low" },
-  ];
+  ].filter((item, index, self) => index === self.findIndex((t) => t.kw.toLowerCase() === item.kw.toLowerCase()));
 
   const handleSelectSuggestedKeyword = (kw) => {
     setKeywords((prev) => {
@@ -149,24 +157,88 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
           .join(" ");
       };
 
+      const generateRichParagraphs = (headingText, bullets = [], level = "h2") => {
+        const cleanTitle = headingText
+          .replace(/^\d+[\.\)]\s*/, "")
+          .replace(/^(heading \d:\s*|#+\s*)/i, "")
+          .trim();
+        const validBullets = (bullets || [])
+          .map((b) => b.replace(/^[•\-\*]\s*/, "").trim())
+          .filter(Boolean);
+
+        const paragraphs = [];
+
+        if (level === "h1") {
+          paragraphs.push(
+            `In today's fast-evolving digital commerce landscape, understanding the core principles behind ${cleanTitle.toLowerCase()} is essential for sustained brand growth and customer engagement. As consumer expectations shift toward higher transparency and personalized experiences, forward-thinking merchants must adopt modern strategies that deliver measurable, lasting value.`
+          );
+          paragraphs.push(
+            `This comprehensive guide breaks down the strategic frameworks, practical execution steps, and industry best practices you need to succeed. Whether you are scaling an established store or launching a new initiative, the insights below will help you navigate complex decisions with clarity and confidence.`
+          );
+          return paragraphs;
+        }
+
+        // Paragraph 1: Strategic context + bullets
+        if (validBullets.length > 0) {
+          const bulletsNarrative = validBullets
+            .map((b) => (/[.!?]$/.test(b) ? b : `${b}.`))
+            .join(" ");
+          paragraphs.push(
+            `A successful strategy for ${cleanTitle.toLowerCase()} begins with clear operational priorities and rigorous planning. Specifically, ${bulletsNarrative} By systematically addressing each of these key aspects, teams can eliminate workflow friction and build a resilient foundation for long-term scalability.`
+          );
+        } else {
+          paragraphs.push(
+            `Effectively implementing ${cleanTitle.toLowerCase()} requires analyzing both current market benchmarks and audience behavioral patterns. High-performing ecommerce teams avoid one-size-fits-all tactics, instead focusing on tailored methodologies that directly align with verified search intent and customer lifecycle needs.`
+          );
+        }
+
+        // Paragraph 2: Tactical execution and deep-dive insights
+        paragraphs.push(
+          `From an execution perspective, achieving consistent excellence in this area demands rigorous quality standards and iterative testing. Implementing structured workflows, automated verification checks, and clear cross-functional guidelines helps reduce turnaround times by up to 40% while preserving brand authority across every published touchpoint.`
+        );
+
+        // Paragraph 3: Measurable KPIs & actionable takeaway for H2
+        if (level === "h2") {
+          paragraphs.push(
+            `To ensure sustainable success, track key performance indicators such as engagement depth, organic visibility, and conversion lift. Regularly reviewing these metrics allows you to fine-tune your approach in real time, staying ahead of competitive shifts and maximizing overall return on investment.`
+          );
+        }
+
+        return paragraphs;
+      };
+
       if (typeof outlineInput === "string" && outlineInput.trim()) {
         const outlineStr = outlineInput.trim();
         if (outlineStr.includes("<")) {
           const parser = new DOMParser();
           const doc = parser.parseFromString(outlineStr, "text/html");
-          const elements = doc.body.childNodes;
-          let currentLines = [];
+          const elements = Array.from(doc.body.childNodes);
+          let currentHeading = null;
+          let currentBullets = [];
 
-          const flushLines = () => {
-            const combined = formatCombinedParagraph(currentLines);
-            if (combined) {
+          const flushCurrentSection = () => {
+            if (currentHeading) {
               rawBlocks.push({
                 id: `b-${bIdx++}`,
-                type: "paragraph",
-                text: combined,
+                type: "heading",
+                level: currentHeading.level,
+                text: currentHeading.text,
+              });
+              const paragraphs = generateRichParagraphs(
+                currentHeading.text,
+                currentBullets,
+                currentHeading.level
+              );
+              paragraphs.forEach((pText) => {
+                rawBlocks.push({
+                  id: `b-${bIdx++}`,
+                  type: "paragraph",
+                  text: pText,
+                });
               });
             }
-            currentLines = [];
+            currentHeading = null;
+            currentBullets = [];
           };
 
           elements.forEach((node) => {
@@ -174,89 +246,94 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
             const text = (node.textContent || "").trim();
             if (!text) return;
             if (tag === "h1" || tag === "h2" || tag === "h3") {
-              flushLines();
-              rawBlocks.push({
-                id: `b-${bIdx++}`,
-                type: "heading",
-                level: tag,
-                text: text,
-              });
+              flushCurrentSection();
+              currentHeading = { level: tag, text };
             } else if (tag === "ul" || tag === "ol") {
               node.querySelectorAll("li").forEach((li) => {
                 const liText = (li.textContent || "").trim();
-                if (liText) {
-                  currentLines.push(liText);
-                }
+                if (liText) currentBullets.push(liText);
               });
             } else if (tag === "li" || tag === "p") {
-              currentLines.push(text);
+              currentBullets.push(text);
             }
           });
-          flushLines();
+          flushCurrentSection();
         } else {
           const lines = outlineStr.split("\n");
-          let currentLines = [];
+          let currentHeading = null;
+          let currentBullets = [];
 
-          const flushLines = () => {
-            const combined = formatCombinedParagraph(currentLines);
-            if (combined) {
+          const flushCurrentSection = () => {
+            if (currentHeading) {
               rawBlocks.push({
                 id: `b-${bIdx++}`,
-                type: "paragraph",
-                text: combined,
+                type: "heading",
+                level: currentHeading.level,
+                text: currentHeading.text,
+              });
+              const paragraphs = generateRichParagraphs(
+                currentHeading.text,
+                currentBullets,
+                currentHeading.level
+              );
+              paragraphs.forEach((pText) => {
+                rawBlocks.push({
+                  id: `b-${bIdx++}`,
+                  type: "paragraph",
+                  text: pText,
+                });
               });
             }
-            currentLines = [];
+            currentHeading = null;
+            currentBullets = [];
           };
 
           lines.forEach((line) => {
             const trimmed = line.trim();
             if (!trimmed) return;
             if (trimmed.toLowerCase().startsWith("heading 1:") || trimmed.startsWith("# ")) {
-              flushLines();
-              rawBlocks.push({
-                id: `b-${bIdx++}`,
-                type: "heading",
+              flushCurrentSection();
+              currentHeading = {
                 level: "h1",
                 text: trimmed.replace(/^(heading 1:\s*|#\s*)/i, "").trim(),
-              });
+              };
             } else if (trimmed.toLowerCase().startsWith("heading 2:") || trimmed.startsWith("## ")) {
-              flushLines();
-              rawBlocks.push({
-                id: `b-${bIdx++}`,
-                type: "heading",
+              flushCurrentSection();
+              currentHeading = {
                 level: "h2",
                 text: trimmed.replace(/^(heading 2:\s*|##\s*)/i, "").trim(),
-              });
+              };
             } else if (trimmed.toLowerCase().startsWith("heading 3:") || trimmed.startsWith("### ")) {
-              flushLines();
-              rawBlocks.push({
-                id: `b-${bIdx++}`,
-                type: "heading",
+              flushCurrentSection();
+              currentHeading = {
                 level: "h3",
                 text: trimmed.replace(/^(heading 3:\s*|###\s*)/i, "").trim(),
-              });
+              };
             } else {
-              currentLines.push(trimmed.replace(/^[•\-\*]\s*/, "").trim());
+              currentBullets.push(trimmed.replace(/^[•\-\*]\s*/, "").trim());
             }
           });
-          flushLines();
+          flushCurrentSection();
         }
       } else if (Array.isArray(outlineInput) && outlineInput.length > 0) {
         outlineInput.forEach((item) => {
+          const headingText = item.title || item.text || "Heading";
+          const level = item.level || "h2";
           rawBlocks.push({
             id: `b-${bIdx++}`,
             type: "heading",
-            level: item.level || "h2",
-            text: item.title || item.text || "Heading",
+            level,
+            text: headingText,
           });
-          if (item.description || item.body) {
+          const bullets = item.description ? [item.description] : item.bullets || [];
+          const paragraphs = generateRichParagraphs(headingText, bullets, level);
+          paragraphs.forEach((pText) => {
             rawBlocks.push({
               id: `b-${bIdx++}`,
               type: "paragraph",
-              text: item.description || item.body,
+              text: pText,
             });
-          }
+          });
         });
       }
 
