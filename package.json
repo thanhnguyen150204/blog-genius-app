@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "shopify app dev",
+    "dev-local": "shopify app dev --config shopify.app.blog-app.toml",
     "build": "cd web/frontend && yarn build",
     "deploy": "shopify app deploy",
     "config:link": "shopify app config link",

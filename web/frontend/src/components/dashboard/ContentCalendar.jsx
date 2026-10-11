@@ -4,12 +4,13 @@ import {
   BlockStack,
   InlineStack,
   Text,
-  ButtonGroup,
   Button,
   Box,
   Divider,
   Badge,
+  Icon,
 } from "@shopify/polaris";
+import { ChevronLeftIcon, ChevronRightIcon, PlusCircleIcon } from "@shopify/polaris-icons";
 import { useNavigate } from "react-router-dom";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { SlidingSegmentedControl } from "../SlidingSegmentedControl";
@@ -19,16 +20,11 @@ export function ContentCalendar({
   onViewChange,
   calendarStatus = "All",
   onStatusChange,
-  calendarIntent = "All",
-  onIntentChange,
   isPostVisible = true,
 }) {
   const navigate = useNavigate();
   const shopify = useAppBridge();
   const [internalIntent, setInternalIntent] = useState("All");
-
-  const activeIntent = onIntentChange ? calendarIntent : internalIntent;
-  const handleIntentChange = onIntentChange || setInternalIntent;
 
   const handlePostKeyDown = (e) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -37,31 +33,225 @@ export function ContentCalendar({
     }
   };
 
-  const getCalendarTitle = () => {
-    if (calendarView === "Week") return "September 27 – October 3, 2026";
-    if (calendarView === "Day") return "SAT, October 3, 2026";
-    return "October 2026";
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth();
+  const todayDate = today.getDate();
+
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const dateNum = currentDate.getDate();
+
+  const handleJumpToday = () => {
+    setCurrentDate(new Date());
   };
+
+  const handlePrevPeriod = () => {
+    setCurrentDate((prev) => {
+      const y = prev.getFullYear();
+      const m = prev.getMonth();
+      const d = prev.getDate();
+      if (calendarView === "Month") {
+        return new Date(y, m - 1, 1);
+      }
+      if (calendarView === "Week") {
+        return new Date(y, m, d - 7);
+      }
+      return new Date(y, m, d - 1);
+    });
+  };
+
+  const handleNextPeriod = () => {
+    setCurrentDate((prev) => {
+      const y = prev.getFullYear();
+      const m = prev.getMonth();
+      const d = prev.getDate();
+      if (calendarView === "Month") {
+        return new Date(y, m + 1, 1);
+      }
+      if (calendarView === "Week") {
+        return new Date(y, m, d + 7);
+      }
+      return new Date(y, m, d + 1);
+    });
+  };
+
+  const isCurrentPeriod = (() => {
+    if (calendarView === "Month") {
+      return year === todayYear && month === todayMonth;
+    }
+    if (calendarView === "Day") {
+      return year === todayYear && month === todayMonth && dateNum === todayDate;
+    }
+    const dayOfWeek = currentDate.getDay();
+    const startOfWeek = new Date(year, month, dateNum - dayOfWeek);
+    const endOfWeek = new Date(year, month, dateNum - dayOfWeek + 6, 23, 59, 59);
+    return today >= startOfWeek && today <= endOfWeek;
+  })();
+
+  const getCalendarTitle = () => {
+    const monthName = currentDate.toLocaleString("en-US", { month: "long" });
+
+    if (calendarView === "Week") {
+      const dayOfWeek = currentDate.getDay();
+      const startOfWeek = new Date(year, month, dateNum - dayOfWeek);
+      const endOfWeek = new Date(year, month, dateNum - dayOfWeek + 6);
+      const startMonth = startOfWeek.toLocaleString("en-US", { month: "long" });
+      const endMonth = endOfWeek.toLocaleString("en-US", { month: "long" });
+      if (startMonth === endMonth) {
+        return `${startMonth} ${startOfWeek.getDate()} – ${endOfWeek.getDate()}, ${endOfWeek.getFullYear()}`;
+      }
+      return `${startMonth} ${startOfWeek.getDate()} – ${endMonth} ${endOfWeek.getDate()}, ${endOfWeek.getFullYear()}`;
+    }
+
+    if (calendarView === "Day") {
+      const dayName = currentDate.toLocaleString("en-US", { weekday: "short" }).toUpperCase();
+      return `${dayName}, ${monthName} ${dateNum}, ${year}`;
+    }
+
+    return `${monthName} ${year}`;
+  };
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDayOfWeek = new Date(year, month, 1).getDay();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  const prevMonthDays = Array.from(
+    { length: firstDayOfWeek },
+    (_, i) => daysInPrevMonth - firstDayOfWeek + 1 + i
+  );
+  const currentMonthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const totalCells = Math.ceil((firstDayOfWeek + daysInMonth) / 7) * 7;
+  const nextMonthDaysCount = totalCells - (firstDayOfWeek + daysInMonth);
+  const nextMonthDays = Array.from({ length: nextMonthDaysCount }, (_, i) => i + 1);
+
+  const weekDayOfWeek = currentDate.getDay();
+  const weekDays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((name, idx) => {
+    const d = new Date(year, month, dateNum - weekDayOfWeek + idx);
+    const isToday =
+      d.getFullYear() === todayYear &&
+      d.getMonth() === todayMonth &&
+      d.getDate() === todayDate;
+    const isOtherMonth = d.getMonth() !== month;
+    return {
+      name,
+      date: d.getDate(),
+      isPrevMonth: isOtherMonth,
+      isToday,
+    };
+  });
+
+  const currentDayName = currentDate.toLocaleString("en-US", { weekday: "short" }).toUpperCase();
+  const isCurrentDayToday =
+    year === todayYear && month === todayMonth && dateNum === todayDate;
+  const currentMonthName = currentDate.toLocaleString("en-US", { month: "long" });
 
   return (
     <Card>
       <BlockStack gap="400">
         <InlineStack align="space-between" blockAlign="center" wrap>
           <InlineStack gap="300" blockAlign="center">
-            <Text variant="headingLg" as="h2">
-              {getCalendarTitle()}
-            </Text>
-            <ButtonGroup variant="segmented">
-              <Button size="slim" onClick={() => shopify.toast?.show("Jumped to today")}>
+            <div
+              style={{
+                minWidth:
+                  calendarView === "Week"
+                    ? "310px"
+                    : calendarView === "Day"
+                    ? "220px"
+                    : "185px",
+                flexShrink: 0,
+              }}
+            >
+              <Text variant="headingLg" as="h2">
+                {getCalendarTitle()}
+              </Text>
+            </div>
+            <div
+              className="calendar-nav-group"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                backgroundColor: "#f4f4f5",
+                borderRadius: "8px",
+                padding: "2px",
+                border: "1px solid #e4e4e7",
+                userSelect: "none",
+                gap: "2px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleJumpToday}
+                className={`calendar-nav-btn ${isCurrentPeriod ? "active" : ""}`}
+                style={{
+                  background: isCurrentPeriod ? "#ffffff" : "transparent",
+                  border: "none",
+                  padding: "4px 12px",
+                  fontSize: "12px",
+                  fontWeight: isCurrentPeriod ? "600" : "500",
+                  color: isCurrentPeriod ? "#18181b" : "#71717a",
+                  cursor: "pointer",
+                  borderRadius: "6px",
+                  boxShadow: isCurrentPeriod
+                    ? "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)"
+                    : "none",
+                  transition: "all 0.18s ease",
+                  outline: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 Today
-              </Button>
-              <Button size="slim" onClick={() => shopify.toast?.show("Previous time period")}>
-                &lt;
-              </Button>
-              <Button size="slim" onClick={() => shopify.toast?.show("Next time period")}>
-                &gt;
-              </Button>
-            </ButtonGroup>
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePrevPeriod}
+                className="calendar-nav-btn"
+                aria-label="Previous time period"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: "3px 6px",
+                  cursor: "pointer",
+                  borderRadius: "6px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#71717a",
+                  transition: "all 0.18s ease",
+                  outline: "none",
+                }}
+              >
+                <Icon source={ChevronLeftIcon} tone="subdued" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNextPeriod}
+                className="calendar-nav-btn"
+                aria-label="Next time period"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: "3px 6px",
+                  cursor: "pointer",
+                  borderRadius: "6px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#71717a",
+                  transition: "all 0.18s ease",
+                  outline: "none",
+                }}
+              >
+                <Icon source={ChevronRightIcon} tone="subdued" />
+              </button>
+            </div>
           </InlineStack>
 
           <InlineStack gap="300" blockAlign="center">
@@ -72,8 +262,8 @@ export function ContentCalendar({
               size="sm"
             />
 
-            <Button onClick={() => navigate("/studio")}>
-              + Create blog post
+            <Button icon={PlusCircleIcon} onClick={() => navigate("/studio")}>
+              Create blog post
             </Button>
           </InlineStack>
         </InlineStack>
@@ -125,7 +315,7 @@ export function ContentCalendar({
                 minWidth: "500px",
               }}
             >
-              {[27, 28, 29, 30].map((d) => (
+              {prevMonthDays.map((d) => (
                 <div
                   key={`prev-${d}`}
                   style={{
@@ -140,8 +330,11 @@ export function ContentCalendar({
                 </div>
               ))}
 
-              {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
-                const isToday = day === 3;
+              {currentMonthDays.map((day) => {
+                const isToday =
+                  year === todayYear &&
+                  month === todayMonth &&
+                  day === todayDate;
                 return (
                   <div
                     key={`day-${day}`}
@@ -173,7 +366,7 @@ export function ContentCalendar({
                       </span>
                     </div>
 
-                    {day === 3 && isPostVisible && (
+                    {isToday && isPostVisible && (
                       <div
                         role="button"
                         tabIndex={0}
@@ -203,6 +396,21 @@ export function ContentCalendar({
                   </div>
                 );
               })}
+
+              {nextMonthDays.map((d) => (
+                <div
+                  key={`next-${d}`}
+                  style={{
+                    borderRight: "1px solid #f4f4f5",
+                    borderBottom: "1px solid #f4f4f5",
+                    padding: "8px",
+                    color: "#d4d4d8",
+                    fontSize: "12px",
+                  }}
+                >
+                  {d}
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -220,17 +428,9 @@ export function ContentCalendar({
                 minWidth: "500px",
               }}
             >
-              {[
-                { name: "SUN", date: 27, isPrevMonth: true, isToday: false },
-                { name: "MON", date: 28, isPrevMonth: true, isToday: false },
-                { name: "TUE", date: 29, isPrevMonth: true, isToday: false },
-                { name: "WED", date: 30, isPrevMonth: true, isToday: false },
-                { name: "THU", date: 1, isPrevMonth: false, isToday: false },
-                { name: "FRI", date: 2, isPrevMonth: false, isToday: false },
-                { name: "SAT", date: 3, isPrevMonth: false, isToday: true },
-              ].map((item, index) => (
+              {weekDays.map((item, index) => (
                 <div
-                  key={item.name}
+                  key={`${item.name}-${item.date}`}
                   className="calendar-week-col"
                   style={{
                     borderRight: index < 6 ? "1px solid #f4f4f5" : "none",
@@ -308,14 +508,16 @@ export function ContentCalendar({
                 borderBottom: "1px solid #e4e4e7",
               }}
             >
-              <span style={{ fontSize: "13px", fontWeight: "600", color: "#64748b" }}>SAT</span>
+              <span style={{ fontSize: "13px", fontWeight: "600", color: "#64748b" }}>
+                {currentDayName}
+              </span>
               <div
                 style={{
                   width: "36px",
                   height: "36px",
                   borderRadius: "50%",
-                  backgroundColor: "#2563eb",
-                  color: "#ffffff",
+                  backgroundColor: isCurrentDayToday ? "#2563eb" : "#e2e8f0",
+                  color: isCurrentDayToday ? "#ffffff" : "#18181b",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -323,10 +525,10 @@ export function ContentCalendar({
                   fontWeight: "700",
                 }}
               >
-                3
+                {dateNum}
               </div>
               <span style={{ fontSize: "14px", fontWeight: "600", color: "#334155" }}>
-                October 2026
+                {currentMonthName} {year}
               </span>
             </div>
 
@@ -339,7 +541,7 @@ export function ContentCalendar({
                 justifyContent: "center",
               }}
             >
-              {isPostVisible ? (
+              {isCurrentDayToday && isPostVisible ? (
                 <div
                   role="button"
                   tabIndex={0}

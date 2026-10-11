@@ -291,7 +291,6 @@ export default function Keywords() {
       </div>
 
       <BlockStack gap="400">
-        {/* Yellow Warning Banner: only visible when no topic hashtags exist */}
         {showPasswordBanner && topics.length === 0 && (
           <Banner
             tone="warning"

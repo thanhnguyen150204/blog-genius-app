@@ -1,9 +1,12 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import { connectDB } from "./database/db.js";
 
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,9 +21,11 @@ connectDB();
 // Routes
 import blogRoutes from "./route/blog.route.js";
 import shopRoutes from "./route/shop.route.js";
+import aiRoutes from "./route/ai.route.js";
 
 app.use("/api/blogs", blogRoutes);
 app.use("/api/shop", shopRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Blog Genius API is running!" });

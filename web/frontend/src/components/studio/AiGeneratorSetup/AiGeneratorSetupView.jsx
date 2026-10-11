@@ -16,6 +16,7 @@ import { TypeSpecificSettingsCard } from "./TypeSpecificSettingsCard";
 import { KeywordAndScheduleSettings } from "./KeywordAndScheduleSettings";
 import { PostTitleAndOutlineSettings } from "./PostTitleAndOutlineSettings";
 import { getSavedKeywords } from "../../../utils/savedKeywordsStorage";
+import { ProductPicker, CollectionPicker } from "../../common";
 
 export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
   const [language, setLanguage] = useState("English(US)");
@@ -674,59 +675,36 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
         </Modal.Section>
       </Modal>
 
-      <Modal
+      <ProductPicker
         open={showProductModal}
         onClose={() => setShowProductModal(false)}
-        title="Insert Product Link into Blog"
-        primaryAction={{
-          content: "Insert Selected Product",
-          onAction: () => {
+        onSelect={(selected) => {
+          const item = selected[0];
+          if (item) {
             setBusinessDesc((prev) =>
-              `${prev ? prev + " " : ""}Featured Product: Snowboard Pro Series 2026.`
+              `${prev ? prev + " " : ""}Featured Product: ${item.title} (${item.price || ""}).`
             );
-            setShowProductModal(false);
-          },
+            if (item.image) {
+              setProductImage(item.image);
+            }
+          }
+          setShowProductModal(false);
         }}
-        secondaryActions={[
-          {
-            content: "Cancel",
-            onAction: () => setShowProductModal(false),
-          },
-        ]}
-      >
-        <Modal.Section>
-          <Text variant="bodySm">
-            Select a Shopify store product to automatically embed product cards, price metadata, and structured buy buttons.
-          </Text>
-        </Modal.Section>
-      </Modal>
+      />
 
-      <Modal
+      <CollectionPicker
         open={showCollectionModal}
         onClose={() => setShowCollectionModal(false)}
-        title="Insert Collection Link into Blog"
-        primaryAction={{
-          content: "Insert Selected Collection",
-          onAction: () => {
+        onSelect={(selected) => {
+          const item = selected[0];
+          if (item) {
             setBusinessDesc((prev) =>
-              `${prev ? prev + " " : ""}Featured Collection: Winter Gear & Outdoor Accessories.`
+              `${prev ? prev + " " : ""}Featured Collection: ${item.title}.`
             );
-            setShowCollectionModal(false);
-          },
+          }
+          setShowCollectionModal(false);
         }}
-        secondaryActions={[
-          {
-            content: "Cancel",
-            onAction: () => setShowCollectionModal(false),
-          },
-        ]}
-      >
-        <Modal.Section>
-          <Text variant="bodySm">
-            Select a Shopify collection to dynamically embed category spotlights and recommendation carousels.
-          </Text>
-        </Modal.Section>
-      </Modal>
+      />
     </div>
   );
 }

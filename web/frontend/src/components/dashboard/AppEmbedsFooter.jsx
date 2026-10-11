@@ -1,4 +1,4 @@
-import { Box, InlineStack, BlockStack, Text, Badge, Button, Icon } from "@shopify/polaris";
+import { Box, InlineStack, BlockStack, Text, Badge, Button, Icon, Card } from "@shopify/polaris";
 import { AppExtensionIcon, ShareIcon, SettingsIcon } from "@shopify/polaris-icons";
 import { useNavigate } from "react-router-dom";
 import { useAppBridge } from "@shopify/app-bridge-react";
@@ -8,7 +8,7 @@ export function AppEmbedsFooter() {
   const shopify = useAppBridge();
 
   return (
-    <Box paddingBlock="300">
+    <Card>
       <InlineStack align="space-between" blockAlign="center" wrap gap="400">
         <BlockStack gap="200" inlineAlign="start">
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -48,7 +48,7 @@ export function AppEmbedsFooter() {
           </div>
         </BlockStack>
 
-        <Button
+        <Button 
           icon={SettingsIcon}
           onClick={() => {
             shopify.toast?.show("Opening Theme App Embeds in Shopify Theme Editor...");
@@ -58,7 +58,7 @@ export function AppEmbedsFooter() {
           App embed settings
         </Button>
       </InlineStack>
-    </Box>
+    </Card>
   );
 }
 

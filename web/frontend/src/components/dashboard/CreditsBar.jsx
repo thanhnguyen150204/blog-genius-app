@@ -1,4 +1,4 @@
-import { Box, InlineStack, Text, Button } from "@shopify/polaris";
+import { Box, InlineStack, Text, Button, Card } from "@shopify/polaris";
 import { useNavigate } from "react-router-dom";
 
 export function CreditsBar({
@@ -9,7 +9,7 @@ export function CreditsBar({
   const navigate = useNavigate();
 
   return (
-    <Box paddingBlockEnd="200">
+    <Card>
       <InlineStack align="space-between" blockAlign="center" wrap>
         <InlineStack gap="500" blockAlign="center">
           <Text variant="bodySm" as="span" tone="subdued">
@@ -42,7 +42,7 @@ export function CreditsBar({
           </Button>
         </InlineStack>
       </InlineStack>
-    </Box>
+    </Card>
   );
 }
 

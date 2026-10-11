@@ -1,3 +1,5 @@
+import "./dashboard.scss";
+
 export { CreditsBar } from "./CreditsBar";
 export { RatingFeedbackCard } from "./RatingFeedbackCard";
 export { DashboardHeader } from "./DashboardHeader";

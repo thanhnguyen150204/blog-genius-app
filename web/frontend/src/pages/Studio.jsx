@@ -156,11 +156,6 @@ export default function Studio() {
     setSelectedIds([]);
   };
 
-  // Row click -> opens article details & SEO/GEO audit modal
-  const handleRowClick = (post) => {
-    setActiveDetailPost(post);
-  };
-
   // Action handlers
   const handleCompleteAiGeneration = (newPost) => {
     genTimersRef.current.forEach(clearTimeout);
@@ -412,7 +407,6 @@ export default function Studio() {
                   selectedIds={selectedIds}
                   onToggleSelect={handleToggleSelect}
                   onToggleSelectAll={handleToggleSelectAll}
-                  onRowClick={handleRowClick}
                   onEditPost={handleEditPost}
                   onViewPost={handleViewPost}
                   onDuplicatePost={handleDuplicatePost}
@@ -484,7 +478,7 @@ export default function Studio() {
                 label="Author"
                 options={[
                   { label: "Default (Store Default)", value: "Default (Store Default)" },
-                  { label: "Tapita", value: "Tapita" },
+                  { label: "Author", value: "Author" },
                   { label: "Custom author...", value: "custom" },
                 ]}
                 value={bulkAuthorOption}

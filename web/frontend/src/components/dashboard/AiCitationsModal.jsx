@@ -4,6 +4,10 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 export function AiCitationsModal({ open, onClose }) {
   const shopify = useAppBridge();
 
+  const handleRescan = () => {
+    
+  }
+
   const handleKeyDown = (callback) => (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -17,26 +21,16 @@ export function AiCitationsModal({ open, onClose }) {
       onClose={onClose}
       title="AI Brand Visibility Breakdown (30 Days)"
       primaryAction={{
+        content: "Rescan",
+        onAction: handleRescan,
+      }}
+      secondaryActions={{
         content: "Close",
         onAction: onClose,
       }}
     >
       <Modal.Section>
         <BlockStack gap="400">
-          <Banner tone="info">
-            <BlockStack gap="200">
-              <Text variant="bodySm">
-                These metrics track citation visibility across your configured AI models (<strong>DeepSeek V4.1 Flash</strong> and <strong>Qwen 3.8 Flash</strong>).
-              </Text>
-              <Button
-                size="slim"
-                onClick={() => shopify.toast?.show("Scanning citation data from DeepSeek V4.1 Flash & Qwen 3.8 Flash...")}
-              >
-                Open AI Visibility
-              </Button>
-            </BlockStack>
-          </Banner>
-
           <Card>
             <BlockStack gap="100">
               <Text variant="bodySm" tone="subdued">Total Brand Citations</Text>

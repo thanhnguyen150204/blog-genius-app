@@ -1,6 +1,7 @@
 import { InlineStack, Text, Badge, Button } from "@shopify/polaris";
 import { useNavigate } from "react-router-dom";
 import { useAppBridge } from "@shopify/app-bridge-react";
+import { PlusCircleIcon } from "@shopify/polaris-icons";
 
 export function DashboardHeader() {
   const shopify = useAppBridge();
@@ -18,12 +19,13 @@ export function DashboardHeader() {
 
         <Button
           variant="primary"
+          icon={PlusCircleIcon}
           onClick={() => {
             shopify.toast?.show("Opening Content Studio...");
             navigate("/studio");
           }}
         >
-          + Start building
+          Start building
         </Button>
       </InlineStack>
     </div>

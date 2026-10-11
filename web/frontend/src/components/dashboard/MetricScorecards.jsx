@@ -32,21 +32,19 @@ export function MetricScorecards({
           onKeyDown={handleKeyDown(onOpenAiCitations)}
         >
           <Card>
-            <div style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "105px" }}>
-              <BlockStack gap="100">
-                <Text variant="bodySm" tone="subdued">
-                  AI citations (30 days)
-                </Text>
-                <Text variant="heading2xl" as="p">
-                  0
-                </Text>
-              </BlockStack>
-              <div style={{ height: "24px", display: "flex", alignItems: "center" }}>
+            <BlockStack gap="150">
+              <Text variant="bodySm" tone="subdued">
+                AI citations (30 days)
+              </Text>
+              <Text variant="heading2xl" as="p">
+                0
+              </Text>
+              <div style={{ minHeight: "24px", display: "flex", alignItems: "center" }}>
                 <Text variant="bodyXs" tone="subdued">
                   Click to view AI breakdown ↗
                 </Text>
               </div>
-            </div>
+            </BlockStack>
           </Card>
         </div>
       </Grid.Cell>
@@ -60,21 +58,19 @@ export function MetricScorecards({
           onKeyDown={handleKeyDown(() => navigate("/studio"))}
         >
           <Card>
-            <div style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "105px" }}>
-              <BlockStack gap="100">
-                <Text variant="bodySm" tone="subdued">
-                  Published posts
-                </Text>
-                <Text variant="heading2xl" as="p">
-                  {publishedCount} / {totalPosts}
-                </Text>
-              </BlockStack>
-              <div style={{ height: "24px", display: "flex", alignItems: "center" }}>
+            <BlockStack gap="150">
+              <Text variant="bodySm" tone="subdued">
+                Published posts
+              </Text>
+              <Text variant="heading2xl" as="p">
+                {publishedCount} / {totalPosts}
+              </Text>
+              <div style={{ minHeight: "24px", display: "flex", alignItems: "center" }}>
                 <Text variant="bodyXs" tone="subdued">
                   {scheduledCount} posts scheduled
                 </Text>
               </div>
-            </div>
+            </BlockStack>
           </Card>
         </div>
       </Grid.Cell>
@@ -92,25 +88,23 @@ export function MetricScorecards({
           })}
         >
           <Card>
-            <div style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "105px" }}>
-              <BlockStack gap="100">
-                <Text variant="bodySm" tone="subdued">
-                  GEO health score
-                </Text>
-                <Text
-                  variant="heading2xl"
-                  as="p"
-                  tone={geoHealthScore >= 80 ? "success" : "caution"}
-                >
-                  {geoHealthScore}%
-                </Text>
-              </BlockStack>
-              <div style={{ height: "24px", display: "flex", alignItems: "center" }}>
+            <BlockStack gap="150">
+              <Text variant="bodySm" tone="subdued">
+                GEO health score
+              </Text>
+              <Text
+                variant="heading2xl"
+                as="p"
+                tone={geoHealthScore >= 80 ? "success" : "caution"}
+              >
+                {geoHealthScore}%
+              </Text>
+              <div style={{ minHeight: "24px", display: "flex", alignItems: "center" }}>
                 <Badge tone={geoHealthScore >= 80 ? "success" : "warning"}>
                   {geoHealthScore >= 80 ? "Optimal health" : "Needs attention"}
                 </Badge>
               </div>
-            </div>
+            </BlockStack>
           </Card>
         </div>
       </Grid.Cell>
@@ -124,21 +118,19 @@ export function MetricScorecards({
           onKeyDown={handleKeyDown(onOpenFreshness)}
         >
           <Card>
-            <div style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: "105px" }}>
-              <BlockStack gap="100">
-                <Text variant="bodySm" tone="subdued">
-                  Posts needing refresh
-                </Text>
-                <Text variant="heading2xl" as="p">
-                  {postsNeedingRefresh}
-                </Text>
-              </BlockStack>
-              <div style={{ height: "24px", display: "flex", alignItems: "center" }}>
+            <BlockStack gap="150">
+              <Text variant="bodySm" tone="subdued">
+                Posts needing refresh
+              </Text>
+              <Text variant="heading2xl" as="p">
+                {postsNeedingRefresh}
+              </Text>
+              <div style={{ minHeight: "24px", display: "flex", alignItems: "center" }}>
                 <Text variant="bodyXs" tone="subdued">
                   all posts up to date ↗
                 </Text>
               </div>
-            </div>
+            </BlockStack>
           </Card>
         </div>
       </Grid.Cell>

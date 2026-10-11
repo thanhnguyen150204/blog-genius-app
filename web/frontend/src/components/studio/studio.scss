@@ -1,0 +1,81 @@
+@keyframes fieldNoteFade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.studio-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+  user-select: none;
+
+  &:hover {
+    background-color: #f4f4f5;
+    color: #18181b;
+  }
+
+  &.active {
+    background-color: #ebeef2;
+    color: #18181b;
+    font-weight: 600;
+
+    .studio-tab-badge {
+      background-color: #dbe0e6;
+      color: #18181b;
+    }
+  }
+}
+
+.studio-tab-badge {
+  display: inline-block;
+  background-color: #f1f3f5;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  line-height: 14px;
+}
+
+.Polaris-IndexTable__ScrollBarContainer,
+.Polaris-IndexTable__ScrollBar,
+[class*="ScrollBarContainer"],
+[class*="ScrollBar"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+[class*="ScrollContainer"] {
+  overflow-x: hidden !important;
+  scrollbar-width: none !important;
+  &::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
+.Polaris-IndexTable__TableCell:nth-child(2),
+[class*="TableCell"]:nth-child(2) {
+  white-space: normal !important;
+}
+
+

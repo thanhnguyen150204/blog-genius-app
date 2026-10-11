@@ -1,6 +1,7 @@
 import { Card, InlineStack, BlockStack, Text, Button } from "@shopify/polaris";
 import { useNavigate } from "react-router-dom";
 import { useAppBridge } from "@shopify/app-bridge-react";
+import { PlusCircleIcon } from "@shopify/polaris-icons";
 
 export function CreatePostCallout() {
   const navigate = useNavigate();
@@ -20,12 +21,13 @@ export function CreatePostCallout() {
 
         <Button
           variant="primary"
+          icon={PlusCircleIcon}
           onClick={() => {
             shopify.toast?.show("Opening Studio...");
             navigate("/studio");
           }}
         >
-          + Create blog post
+          Create blog post
         </Button>
       </InlineStack>
     </Card>

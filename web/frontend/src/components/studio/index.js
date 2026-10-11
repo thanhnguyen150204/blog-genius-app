@@ -1,3 +1,5 @@
+import "./studio.scss";
+
 export { StudioHeader } from "./StudioHeader";
 export { StudioTableSubNav } from "./StudioTableSubNav";
 export { StudioTable } from "./StudioTable";
