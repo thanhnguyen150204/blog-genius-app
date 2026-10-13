@@ -46,6 +46,8 @@ export function SlidingSegmentedControl({
         padding: "3px",
         border: "1px solid #e4e4e7",
         userSelect: "none",
+        maxWidth: "100%",
+        overflowX: "auto",
         ...style,
       }}
     >

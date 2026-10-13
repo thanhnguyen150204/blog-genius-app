@@ -59,22 +59,11 @@ export function RecentPostsCard({ posts = [] }) {
 
                 <div style={{ display: "flex", alignItems: "center", gap: "16px", flexShrink: 0 }}>
                   <div style={{ width: "48px", display: "flex", justifyContent: "center" }}>
-                    <div
-                      style={{
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "50%",
-                        backgroundColor: post.geoScore >= 80 ? "#dcfce7" : "#ffedd5",
-                        color: post.geoScore >= 80 ? "#15803d" : "#ea580c",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {post.geoScore}
-                    </div>
+                    <Badge tone={post.geoScore > 80 ? "success" : post.geoScore > 50 ? "warning" : "critical"}>
+                      <Text variant="bodyMd" fontWeight="semibold">
+                        {post.geoScore}
+                      </Text>
+                    </Badge>
                   </div>
 
                   <div style={{ width: "88px", display: "flex", justifyContent: "center" }}>

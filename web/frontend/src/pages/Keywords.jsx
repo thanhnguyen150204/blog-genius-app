@@ -8,7 +8,6 @@ import {
   Tag,
   Icon,
   Checkbox,
-  Banner,
 } from "@shopify/polaris";
 import {
   MagicIcon,
@@ -187,7 +186,6 @@ export default function Keywords() {
     setTopicError(false);
   };
 
-  // Generate keywords with required validation
   const handleGenerateKeywords = () => {
     const trimmed = topicInput.trim();
     const effectiveTopics = [...topics];
@@ -213,13 +211,11 @@ export default function Keywords() {
     }, 600);
   };
 
-  // Add single keyword
   const handleAddKeyword = (kw) => {
     addSavedKeyword(kw);
     shopify.toast?.show(`Added "${kw}" to saved keywords!`);
   };
 
-  // Toggle selection checkbox
   const handleToggleSelectRow = (kw) => {
     setSelectedKws((prev) => {
       const next = new Set(prev);
@@ -232,7 +228,6 @@ export default function Keywords() {
     });
   };
 
-  // Select all / Deselect all
   const handleToggleSelectAll = () => {
     if (selectedKws.size === suggestedList.length) {
       setSelectedKws(new Set());
@@ -241,7 +236,6 @@ export default function Keywords() {
     }
   };
 
-  // Bulk add selected
   const handleAddSelectedKeywords = () => {
     const listToAdd = Array.from(selectedKws);
     if (listToAdd.length === 0) return;
@@ -254,7 +248,6 @@ export default function Keywords() {
 
   return (
     <div style={{ padding: "24px 32px 80px 32px", maxWidth: "1160px", margin: "0 auto" }}>
-      {/* Top Header */}
       <div
         style={{
           display: "flex",
@@ -291,30 +284,6 @@ export default function Keywords() {
       </div>
 
       <BlockStack gap="400">
-        {showPasswordBanner && topics.length === 0 && (
-          <Banner
-            tone="warning"
-            title="Your store is password-protected"
-            onDismiss={() => setShowPasswordBanner(false)}
-          >
-            <p>
-              We can't suggest keywords for password-protected stores. Please remove
-              password for your store first before you can use this feature.{" "}
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  shopify.toast?.show("Redirecting to Shopify Preferences...");
-                }}
-                style={{ color: "#005bd3", textDecoration: "underline", fontWeight: 500 }}
-              >
-                Remove store password
-              </a>
-            </p>
-          </Banner>
-        )}
-
-        {/* AI Keyword Suggestion Card */}
         <div
           style={{
             backgroundColor: "#ffffff",
@@ -329,7 +298,6 @@ export default function Keywords() {
               AI Keyword Suggestion
             </Text>
 
-            {/* Language Selector */}
             <div style={{ maxWidth: "260px" }}>
               <Select
                 label="Language"
@@ -339,7 +307,6 @@ export default function Keywords() {
               />
             </div>
 
-            {/* Business Description & Target Customer 2-column Grid */}
             <div
               style={{
                 display: "grid",
@@ -347,7 +314,6 @@ export default function Keywords() {
                 gap: "20px",
               }}
             >
-              {/* Business Description */}
               <div
                 style={{
                   backgroundColor: isEditingBusinessDesc ? "#ffffff" : "#f7f7f8",
@@ -409,7 +375,6 @@ export default function Keywords() {
                 </div>
               </div>
 
-              {/* Target Customer */}
               <div
                 style={{
                   backgroundColor: isEditingTargetCustomer ? "#ffffff" : "#f7f7f8",

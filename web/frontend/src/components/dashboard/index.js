@@ -12,3 +12,4 @@ export { ContentCalendar } from "./ContentCalendar";
 export { AppEmbedsFooter } from "./AppEmbedsFooter";
 export { FreshnessModal } from "./FreshnessModal";
 export { AiCitationsModal } from "./AiCitationsModal";
+export { TrendingIdeasCard } from "./TrendingIdeasCard";

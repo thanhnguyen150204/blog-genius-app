@@ -1,6 +1,7 @@
-import { Grid, Card, BlockStack, Text, Badge } from "@shopify/polaris";
+import { Grid, Card, BlockStack, Text, Badge, Icon } from "@shopify/polaris";
 import { useNavigate } from "react-router-dom";
 import { useAppBridge } from "@shopify/app-bridge-react";
+import { ArrowDiagonalIcon } from "@shopify/polaris-icons";
 
 export function MetricScorecards({
   geoHealthScore = 60,
@@ -41,8 +42,9 @@ export function MetricScorecards({
               </Text>
               <div style={{ minHeight: "24px", display: "flex", alignItems: "center" }}>
                 <Text variant="bodyXs" tone="subdued">
-                  Click to view AI breakdown ↗
+                  Click to view AI breakdown
                 </Text>
+                <Icon source={ArrowDiagonalIcon} tone="subdued"/>
               </div>
             </BlockStack>
           </Card>
@@ -127,8 +129,9 @@ export function MetricScorecards({
               </Text>
               <div style={{ minHeight: "24px", display: "flex", alignItems: "center" }}>
                 <Text variant="bodyXs" tone="subdued">
-                  all posts up to date ↗
+                  All posts up to date
                 </Text>
+                <Icon source={ArrowDiagonalIcon} tone="subdued" />
               </div>
             </BlockStack>
           </Card>

@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { Page, BlockStack, Grid } from "@shopify/polaris";
+import { useState, useEffect, useRef } from "react";
+import { Page, BlockStack, Layout } from "@shopify/polaris";
+import { useAppBridge } from "@shopify/app-bridge-react";
 import {
   CreditsBar,
   RatingFeedbackCard,
   DashboardHeader,
   MetricScorecards,
-  ContentByIntentCard,
-  RecentPostsCard,
+  TrendingIdeasCard,
   GeoTechnicalHealthCard,
   CreatePostCallout,
   ContentCalendar,
@@ -16,9 +16,8 @@ import {
 } from "../components/dashboard";
 
 export default function Dashboard() {
+  const shopify = useAppBridge();
   const [geoHealthScore, setGeoHealthScore] = useState(60);
-  const [missingFaqCount, setMissingFaqCount] = useState(1);
-  const [missingSummaryCount, setMissingSummaryCount] = useState(1);
   const [calendarStatus, setCalendarStatus] = useState("All");
   const [calendarView, setCalendarView] = useState("Month");
   const [showRatingBanner, setShowRatingBanner] = useState(true);
@@ -26,6 +25,44 @@ export default function Dashboard() {
   const [hoverRating, setHoverRating] = useState(0);
   const [showFreshnessModal, setShowFreshnessModal] = useState(false);
   const [showAiCitationsModal, setShowAiCitationsModal] = useState(false);
+  const [trendingCardHeight, setTrendingCardHeight] = useState(null);
+  const trendingCardRef = useRef(null);
+
+  useEffect(() => {
+    if (!trendingCardRef.current) return;
+    const updateHeight = () => {
+      if (window.innerWidth > 768 && trendingCardRef.current) {
+        setTrendingCardHeight(trendingCardRef.current.offsetHeight);
+      } else {
+        setTrendingCardHeight(null);
+      }
+    };
+
+    updateHeight();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
+    });
+
+    resizeObserver.observe(trendingCardRef.current);
+    window.addEventListener("resize", updateHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, []);
+
+  // 7 Core GEO Ranking Factors
+  const [geoFactors, setGeoFactors] = useState({
+    crawlers: true,    
+    freshness: true,    
+    tables: true,       
+    statistics: true,   
+    faq: false,         
+    summary: false,     
+    author: false,      
+  });
 
   const [posts, setPosts] = useState([
     {
@@ -37,23 +74,62 @@ export default function Dashboard() {
       status: "Published",
       hasAnswerBlock: false,
       hasFaqSchema: false,
+      hasAuthorBio: false,
     },
   ]);
 
   const handleFixChecklist = (type) => {
     if (type === "faq") {
-      setMissingFaqCount(0);
-      setGeoHealthScore((prev) => Math.min(100, prev + 20));
+      setGeoFactors((prev) => ({ ...prev, faq: true }));
+      setGeoHealthScore((prev) => Math.min(100, prev + 15));
       setPosts((prev) =>
-        prev.map((p) => ({ ...p, hasFaqSchema: true, geoScore: Math.min(100, p.geoScore + 20) })),
+        prev.map((p) => ({ ...p, hasFaqSchema: true, geoScore: Math.min(100, p.geoScore + 15) })),
       );
+      shopify.toast?.show("Applied schema.org/FAQPage JSON-LD schema (+15% GEO score)");
     } else if (type === "summary") {
-      setMissingSummaryCount(0);
-      setGeoHealthScore((prev) => Math.min(100, prev + 20));
+      setGeoFactors((prev) => ({ ...prev, summary: true }));
+      setGeoHealthScore((prev) => Math.min(100, prev + 15));
       setPosts((prev) =>
-        prev.map((p) => ({ ...p, hasAnswerBlock: true, geoScore: Math.min(100, p.geoScore + 20) })),
+        prev.map((p) => ({ ...p, hasAnswerBlock: true, geoScore: Math.min(100, p.geoScore + 15) })),
       );
+      shopify.toast?.show("Injected Direct Answer block (TL;DR) into post (+15% GEO score)");
+    } else if (type === "author") {
+      setGeoFactors((prev) => ({ ...prev, author: true }));
+      setGeoHealthScore((prev) => Math.min(100, prev + 10));
+      setPosts((prev) =>
+        prev.map((p) => ({ ...p, hasAuthorBio: true, geoScore: Math.min(100, p.geoScore + 10) })),
+      );
+      shopify.toast?.show("Assigned Store Expert Author E-E-A-T profile (+10% GEO score)");
+    } else if (type === "statistics") {
+      shopify.toast?.show("Statistical proof verified: +41% citation boost (Princeton GEO bench)");
+    } else if (type === "tables") {
+      shopify.toast?.show("HTML comparison tables verified: +38% LLM extraction accuracy");
+    } else if (type === "crawlers") {
+      shopify.toast?.show("AI crawlers verified: robots.txt allows GPTBot, ClaudeBot, PerplexityBot");
     }
+  };
+
+  const handleAutoFixAll = () => {
+    setGeoFactors({
+      crawlers: true,
+      freshness: true,
+      tables: true,
+      statistics: true,
+      faq: true,
+      summary: true,
+      author: true,
+    });
+    setGeoHealthScore(100);
+    setPosts((prev) =>
+      prev.map((p) => ({
+        ...p,
+        hasFaqSchema: true,
+        hasAnswerBlock: true,
+        hasAuthorBio: true,
+        geoScore: 100,
+      })),
+    );
+    shopify.toast?.show("Auto-fixed all GEO technical & content factors! Score is now 100% Optimal.");
   };
 
   const isPostVisible = calendarStatus === "All" || calendarStatus === "Published";
@@ -74,35 +150,24 @@ export default function Dashboard() {
             onOpenFreshness={() => setShowFreshnessModal(true)}
           />
 
-          <Grid>
-            <Grid.Cell columnSpan={{ xs: 12, sm: 12, md: 8, lg: 8 }}>
-              <div style={{ height: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
-                <ContentByIntentCard
-                  totalPosts={posts.length}
-                  informationalCount={posts.filter((p) => p.intent === "Informational").length}
-                  buyersGuideCount={posts.filter((p) => p.intent === "Buyer's guide").length}
-                  faqCount={posts.filter((p) => p.intent === "FAQ").length}
-                  howToCount={posts.filter((p) => p.intent === "How-to").length}
-                  companyFactsCount={posts.filter((p) => p.intent === "Company Facts").length}
-                  aboutCount={posts.filter((p) => p.intent === "About").length}
-                />
-                <RecentPostsCard posts={posts} />
-              </div>
-            </Grid.Cell>
-
-            <Grid.Cell columnSpan={{ xs: 12, sm: 12, md: 4, lg: 4 }}>
-              <div style={{ height: "100%" }}>
+          <div className="dashboard-layout-row">
+            <Layout>
+              <Layout.Section>
+                <div ref={trendingCardRef} style={{ height: "100%" }}>
+                  <TrendingIdeasCard />
+                </div>
+              </Layout.Section>
+              <Layout.Section variant="oneThird">
                 <GeoTechnicalHealthCard
-                  missingFaqCount={missingFaqCount}
-                  missingSummaryCount={missingSummaryCount}
+                  geoFactors={geoFactors}
+                  geoHealthScore={geoHealthScore}
                   onFixChecklist={handleFixChecklist}
                   onOpenFreshness={() => setShowFreshnessModal(true)}
+                  cardHeight={trendingCardHeight}
                 />
-              </div>
-            </Grid.Cell>
-          </Grid>
-
-          <CreatePostCallout />
+              </Layout.Section>
+            </Layout>
+          </div>
 
           <ContentCalendar
             calendarView={calendarView}
