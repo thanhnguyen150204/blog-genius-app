@@ -1,0 +1,273 @@
+// Styling specifically scoped for Content Idea module
+.content-ideas-page {
+  padding-bottom: 3rem;
+
+  .content-ideas-scorecard {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-radius: var(--p-border-radius-300, 8px);
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  .content-ideas-filter-box {
+    background: var(--p-color-bg-surface);
+    border-radius: var(--p-border-radius-300, 8px);
+    border: 1px solid var(--p-color-border-subdued, #e1e3e5);
+    padding: 16px;
+  }
+
+  .filter-preset-active {
+    font-weight: 600;
+  }
+
+  .opportunity-title-cell {
+    max-width: 320px;
+    min-width: 0;
+  }
+
+  .viability-score-card {
+    background: linear-gradient(135deg, rgba(235, 249, 238, 0.6) 0%, rgba(244, 246, 248, 0.8) 100%);
+    border: 1px solid rgba(44, 110, 73, 0.2);
+    border-radius: var(--p-border-radius-300, 8px);
+    padding: 16px;
+  }
+
+  .outline-step-card {
+    background: var(--p-color-bg-surface-secondary, #f6f6f7);
+    border-radius: var(--p-border-radius-200, 6px);
+    padding: 10px 14px;
+    border-left: 3px solid var(--p-color-bg-fill-magic, #8c4bff);
+  }
+
+  .content-gap-banner {
+    background: #fff8e5;
+    border: 1px solid #ffd280;
+    border-radius: var(--p-border-radius-200, 6px);
+    padding: 12px 14px;
+  }
+
+  .ai-snippet-box {
+    background: #f3f5ff;
+    border: 1px solid #c9d5ff;
+    border-radius: var(--p-border-radius-200, 6px);
+    padding: 12px 14px;
+  }
+
+  // Thanh 1: Category Segmented button group (selected switches to solid black with white text)
+  .content-ideas-category-segmented {
+    .Polaris-ButtonGroup {
+      background: #f1f2f4;
+      padding: 3px;
+      border-radius: var(--p-border-radius-200, 6px);
+      border: 1px solid var(--p-color-border-subdued, #e1e3e5);
+      display: inline-flex;
+      gap: 2px;
+    }
+
+    .Polaris-ButtonGroup__Item {
+      display: inline-flex;
+    }
+
+    .Polaris-Button {
+      background: transparent;
+      border: none !important;
+      border-radius: var(--p-border-radius-200, 6px);
+      color: #5c5f62;
+      font-weight: 500;
+      box-shadow: none !important;
+      padding: 6px 14px;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: #e4e5e7;
+        color: #202223;
+      }
+    }
+
+    .Polaris-Button--pressed,
+    .Polaris-Button[aria-pressed="true"] {
+      background: #202223 !important; // Chuyển màu đen than khi chọn
+      color: #ffffff !important;       // Chữ trắng tuyết
+      border: none !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+
+      .Polaris-Button__Text,
+      span {
+        color: #ffffff !important;
+        font-weight: 600;
+      }
+
+      .Polaris-Button__Icon svg,
+      svg {
+        fill: #ffffff !important;
+      }
+
+      &:hover {
+        background: #000000 !important;
+        color: #ffffff !important;
+      }
+    }
+  }
+
+  // Thanh 2: Presets Segmented button group (nền trắng tuyệt đối, chỉ đổi màu chữ & icon khi được chọn)
+  .content-ideas-presets-segmented {
+    .Polaris-ButtonGroup {
+      background: #ffffff;
+      border-radius: var(--p-border-radius-200, 6px);
+      display: inline-flex;
+      gap: 0;
+    }
+
+    .Polaris-ButtonGroup__Item {
+      display: inline-flex;
+    }
+
+    .Polaris-Button {
+      background: #ffffff !important; // Luôn giữ nền trắng
+      color: var(--p-color-text-subdued, #6d7175);
+      border: 1px solid var(--p-color-border-subdued, #e1e3e5) !important;
+      font-weight: 400;
+      box-shadow: none !important;
+      padding: 4px 12px;
+      transition: all 0.15s ease;
+
+      .Polaris-Button__Icon svg,
+      svg {
+        fill: currentColor !important;
+      }
+
+      &:hover {
+        background: #f9fafb !important;
+        color: #202223;
+      }
+    }
+
+    .Polaris-Button--pressed,
+    .Polaris-Button[aria-pressed="true"] {
+      background: #ffffff !important; // Giữ nền trắng tuyệt đối (không dùng khối nền màu)
+      border-color: #babfc3 !important;
+      box-shadow: inset 0 -2px 0 0 currentColor, 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+
+      .Polaris-Button__Text,
+      span {
+        font-weight: 600;
+        color: inherit !important; // Màu chữ và icon theo màu của preset (ví dụ màu nâu #b24000)
+      }
+
+      .Polaris-Button__Icon svg,
+      svg {
+        fill: currentColor !important;
+      }
+
+      &:hover {
+        background: #ffffff !important;
+      }
+    }
+  }
+}
+
+// Slide-over Right Drawer and Backdrop
+.content-ideas-drawer-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(24, 24, 27, 0.4);
+  z-index: 500;
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  &.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.content-ideas-right-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 500px;
+  max-width: 90vw;
+  background: var(--p-color-bg-surface, #ffffff);
+  z-index: 501;
+  box-shadow: -6px 0 28px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.open {
+    transform: translateX(0);
+  }
+
+  .drawer-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--p-color-border-subdued, #e1e3e5);
+    background: var(--p-color-bg-surface, #ffffff);
+  }
+
+  .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .drawer-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--p-color-border-subdued, #e1e3e5);
+    background: var(--p-color-bg-surface, #ffffff);
+  }
+}
+
+// Floating tab on right screen edge
+.content-ideas-floating-tab-trigger {
+  position: fixed;
+  top: 48%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 490;
+  background: var(--p-color-bg-surface, #ffffff);
+  border: 1px solid var(--p-color-border-subdued, #e1e3e5);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  box-shadow: -2px 3px 12px rgba(0, 0, 0, 0.08);
+  padding: 12px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  user-select: none;
+
+  &:hover {
+    background: var(--p-color-bg-surface-hover, #f6f6f7);
+    padding-right: 14px;
+    box-shadow: -4px 4px 16px rgba(0, 0, 0, 0.14);
+  }
+
+  .tab-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--p-color-text-magic, #8c4bff);
+  }
+
+  .tab-text {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--p-color-text, #202223);
+    white-space: nowrap;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    letter-spacing: 0.5px;
+  }
+}

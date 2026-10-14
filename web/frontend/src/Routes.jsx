@@ -8,12 +8,14 @@ import Settings from "./pages/Settings";
 import Authors from "./pages/Authors";
 import Research from "./pages/Research";
 import Strategy from "./pages/Strategy";
+import ContentIdeas from "./pages/ContentIdeas";
 
 export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/studio" element={<Studio />} />
+      <Route path="/content-ideas" element={<ContentIdeas />} />
       <Route path="/keywords" element={<Keywords />} />
       <Route path="/feature-request" element={<FeatureRequest />} />
       <Route path="/pricing" element={<Pricing />} />

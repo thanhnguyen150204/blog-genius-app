@@ -6,6 +6,7 @@ export function NavigationMenuShopify() {
     <NavMenu>
       <Link to="/" rel="home">BlogGenius</Link>
       <Link to="/studio">Content Studio</Link>
+      <Link to="/content-ideas">Content idea</Link>
       <Link to="/keywords">Keywords</Link>
       <Link to="/pricing">Pricing</Link>
       <Link to="/settings">Settings</Link>
