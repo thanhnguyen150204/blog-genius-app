@@ -17,24 +17,37 @@ TONE_ENUM = {"Authoritative", "Caring", "Friendly", "Informative", "Formal", "Co
 
 def validate_kw_response(obj: dict) -> list[str]:
     errors = []
+    if not isinstance(obj, dict):
+        return ["Response is not a JSON object"]
+
     kws = obj.get("keywords")
     if not isinstance(kws, list) or len(kws) < 2:
-        errors.append("keywords must be a list with >= 2 items")
-        return errors
+        return ["keywords must be a list with >= 2 items"]
+
     for idx, item in enumerate(kws):
-        if not isinstance(item.get("keyword"), str) or not item["keyword"].strip():
+        if not isinstance(item, dict):
+            errors.append(f"keywords[{idx}] must be an object with 'keyword' and 'intent'")
+            continue
+
+        kw_val = item.get("keyword")
+        if not isinstance(kw_val, str) or not kw_val.strip():
             errors.append(f"keywords[{idx}].keyword missing or empty")
+
         intent = item.get("intent")
         if intent not in INTENT_ENUM:
             errors.append(f"keywords[{idx}].intent '{intent}' not in enum")
+
     return errors
 
 
 def validate_cb_response(obj: dict) -> list[str]:
     errors = []
+    if not isinstance(obj, dict):
+        return ["Response is not a JSON object"]
 
     for field in ["primary_keyword", "target_audience", "suggested_cta"]:
-        if not isinstance(obj.get(field), str) or not obj[field].strip():
+        val = obj.get(field)
+        if not isinstance(val, str) or not val.strip():
             errors.append(f"'{field}' missing or empty")
 
     if obj.get("dominant_intent") not in INTENT_ENUM:
@@ -61,7 +74,8 @@ def validate_cb_response(obj: dict) -> list[str]:
         errors.append("geo_blueprint missing or not a dict")
     else:
         for key in ["answer_block_focus", "comparison_table_idea"]:
-            if not isinstance(geo.get(key), str) or not geo[key].strip():
+            val = geo.get(key)
+            if not isinstance(val, str) or not val.strip():
                 errors.append(f"geo_blueprint.{key} missing or empty")
         faqs = geo.get("faq_questions", [])
         if not isinstance(faqs, list) or len(faqs) < 2:
@@ -71,13 +85,21 @@ def validate_cb_response(obj: dict) -> list[str]:
 
 
 def dedup_key_kw(obj: dict) -> str:
-    kws = [item.get("keyword", "") for item in obj.get("keywords", [])]
+    kws = []
+    for item in obj.get("keywords", []):
+        if isinstance(item, dict):
+            kws.append(item.get("keyword", ""))
+        else:
+            kws.append(str(item))
     return hashlib.md5("|".join(sorted(kws)).encode()).hexdigest()
 
 
 def dedup_key_cb(obj: dict) -> str:
-    pk = obj.get("primary_keyword", "").lower().strip()
-    return hashlib.md5(pk.encode()).hexdigest()
+    # A unique brief is defined by the combination of primary keyword, audience, and secondary keywords
+    pk = str(obj.get("primary_keyword", "")).lower().strip()
+    audience = str(obj.get("target_audience", "")).lower().strip()
+    sec = "|".join(sorted(str(s).lower().strip() for s in obj.get("secondary_keywords", [])))
+    return hashlib.md5(f"{pk}|{audience}|{sec}".encode()).hexdigest()
 
 
 def process(task: str, inp: Path, out: Path) -> int:
@@ -170,9 +192,11 @@ if __name__ == "__main__":
             out / "content_brief.jsonl",
         )
         total = n_kw + n_cb
-        print(f"[INFO] Summary: {total}/1800 valid samples collected")
+        print(f"\n[INFO] Summary: {total}/1800 valid samples collected (KW: {n_kw}, CB: {n_cb})")
         if total < 1800:
             print(f"[WARN] Short by {1800 - total} samples. Additional generation required.")
+        else:
+            print(f"[SUCCESS] Target achieved! Exceeded 1800 samples with {total} high-quality samples.")
     elif args.task == "KEYWORD_RESEARCH":
         f_inp = inp if inp.suffix == ".jsonl" else inp / "keyword_research_raw.jsonl"
         f_out = out if out.suffix == ".jsonl" else out / "keyword_research.jsonl"
