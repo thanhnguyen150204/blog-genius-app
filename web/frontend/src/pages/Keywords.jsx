@@ -8,6 +8,7 @@ import {
   Tag,
   Icon,
   Checkbox,
+  Badge,
 } from "@shopify/polaris";
 import {
   MagicIcon,
@@ -17,6 +18,7 @@ import {
 } from "@shopify/polaris-icons";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useNavigate } from "react-router-dom";
+import { ContentBriefModal } from "../components/ContentBriefModal";
 import {
   getSavedKeywords,
   addSavedKeyword,
@@ -147,6 +149,29 @@ export default function Keywords() {
   // Saved keywords tracker
   const [savedKws, setSavedKws] = useState(getSavedKeywords);
 
+  // Content Brief Modal State
+  const [activeBrief, setActiveBrief] = useState(null);
+  const [isBriefModalOpen, setIsBriefModalOpen] = useState(false);
+  const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
+  const [analyzingKw, setAnalyzingKw] = useState(null);
+
+  const getKwString = (item) => (typeof item === "string" ? item : item.keyword);
+  const getKwIntent = (item) => (typeof item === "string" ? "Informational" : item.intent || "Informational");
+  const getIntentTone = (intent) => {
+    switch (intent?.toLowerCase()) {
+      case "transactional":
+        return "success";
+      case "commercial":
+        return "magic";
+      case "informational":
+        return "info";
+      case "navigational":
+        return "warning";
+      default:
+        return "subdued";
+    }
+  };
+
   useEffect(() => {
     const handleStorageUpdate = (e) => {
       if (Array.isArray(e.detail)) {
@@ -186,7 +211,7 @@ export default function Keywords() {
     setTopicError(false);
   };
 
-  const handleGenerateKeywords = () => {
+  const handleGenerateKeywords = async () => {
     const trimmed = topicInput.trim();
     const effectiveTopics = [...topics];
     if (trimmed && !effectiveTopics.includes(trimmed)) {
@@ -202,21 +227,91 @@ export default function Keywords() {
 
     setTopicError(false);
     setIsGenerating(true);
-    setTimeout(() => {
+
+    try {
+      const langCode = language.startsWith("vi") ? "vi" : "en";
+      const response = await fetch("/api/ai/research/keywords", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          niche: effectiveTopics.join(", "),
+          seed_keyword: effectiveTopics[0],
+          language: langCode,
+          count: 12,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data?.keywords?.length > 0) {
+          setSuggestedList(result.data.keywords);
+          setIsGenerating(false);
+          setHasGenerated(true);
+          setSelectedKws(new Set());
+          return;
+        }
+      }
+      throw new Error("Fallback required");
+    } catch {
+      // Resilient fallback to mock keywords
       const generated = generateKeywordsForTopics(effectiveTopics);
-      setSuggestedList(generated);
+      setSuggestedList(generated.map((k) => ({ keyword: k, intent: "Informational" })));
+    } finally {
       setIsGenerating(false);
       setHasGenerated(true);
       setSelectedKws(new Set());
-    }, 600);
+    }
   };
 
-  const handleAddKeyword = (kw) => {
+  const handleAnalyzeBrief = async (kwItem) => {
+    const kw = getKwString(kwItem);
+    const knownIntent = getKwIntent(kwItem);
+
+    setAnalyzingKw(kw);
+    setIsAnalyzingBrief(true);
+    try {
+      const langCode = language.startsWith("vi") ? "vi" : "en";
+      const res = await fetch("/api/ai/research/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          primary_keyword: kw,
+          niche: topics.length > 0 ? topics.join(", ") : undefined,
+          known_intent: knownIntent,
+          language: langCode,
+        }),
+      });
+      const result = await res.json();
+      if (result.success && result.data) {
+        setActiveBrief(result.data);
+        setIsBriefModalOpen(true);
+      } else {
+        shopify.toast?.show("Unable to analyze brief. Please try again.");
+      }
+    } catch (err) {
+      shopify.toast?.show("Error: " + err.message);
+    } finally {
+      setIsAnalyzingBrief(false);
+      setAnalyzingKw(null);
+    }
+  };
+
+  const handleUseBriefInStudio = (brief) => {
+    if (brief?.primary_keyword) {
+      addSavedKeyword(brief.primary_keyword);
+    }
+    setIsBriefModalOpen(false);
+    navigate("/studio", { state: { brief } });
+  };
+
+  const handleAddKeyword = (kwItem) => {
+    const kw = getKwString(kwItem);
     addSavedKeyword(kw);
     shopify.toast?.show(`Added "${kw}" to saved keywords!`);
   };
 
-  const handleToggleSelectRow = (kw) => {
+  const handleToggleSelectRow = (kwItem) => {
+    const kw = getKwString(kwItem);
     setSelectedKws((prev) => {
       const next = new Set(prev);
       if (next.has(kw)) {
@@ -229,10 +324,11 @@ export default function Keywords() {
   };
 
   const handleToggleSelectAll = () => {
+    const allKwStrings = suggestedList.map(getKwString);
     if (selectedKws.size === suggestedList.length) {
       setSelectedKws(new Set());
     } else {
-      setSelectedKws(new Set(suggestedList));
+      setSelectedKws(new Set(allKwStrings));
     }
   };
 
@@ -241,6 +337,14 @@ export default function Keywords() {
     if (listToAdd.length === 0) return;
     addSavedKeywords(listToAdd);
     shopify.toast?.show(`Added ${listToAdd.length} keywords to saved list!`);
+  };
+
+  const handleAnalyzeSelectedBrief = () => {
+    const firstSelected = Array.from(selectedKws)[0];
+    if (firstSelected) {
+      const item = suggestedList.find((k) => getKwString(k) === firstSelected) || firstSelected;
+      handleAnalyzeBrief(item);
+    }
   };
 
   const isAllSelected =
@@ -628,9 +732,19 @@ export default function Keywords() {
                 <span style={{ fontSize: "13px", fontWeight: 600, color: "#005bd3" }}>
                   {selectedKws.size} keyword(s) selected
                 </span>
-                <Button size="slim" variant="primary" onClick={handleAddSelectedKeywords}>
-                  Add selected keywords ({selectedKws.size})
-                </Button>
+                <InlineStack gap="200">
+                  <Button
+                    size="slim"
+                    icon={MagicIcon}
+                    onClick={handleAnalyzeSelectedBrief}
+                    loading={isAnalyzingBrief}
+                  >
+                    Analyze Brief
+                  </Button>
+                  <Button size="slim" variant="primary" onClick={handleAddSelectedKeywords}>
+                    Add selected keywords ({selectedKws.size})
+                  </Button>
+                </InlineStack>
               </div>
             )}
 
@@ -638,7 +752,7 @@ export default function Keywords() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 180px",
+                gridTemplateColumns: "1fr 140px 220px",
                 alignItems: "center",
                 padding: "12px 20px",
                 borderBottom: "1px solid #e1e3e5",
@@ -657,23 +771,27 @@ export default function Keywords() {
                 />
                 <span>Keyword</span>
               </div>
-              <div style={{ textAlign: "right", paddingRight: "8px" }}>Action</div>
+              <div style={{ textAlign: "center" }}>Search Intent</div>
+              <div style={{ textAlign: "right", paddingRight: "8px" }}>Actions</div>
             </div>
 
             {/* Table Rows */}
             <div>
-              {suggestedList.map((kw) => {
+              {suggestedList.map((item, idx) => {
+                const kw = getKwString(item);
+                const intent = getKwIntent(item);
                 const isAdded =
                   isKeywordSaved(kw) ||
                   savedKws.some((s) => s.toLowerCase() === kw.toLowerCase());
                 const isChecked = selectedKws.has(kw);
+                const isThisAnalyzing = isAnalyzingBrief && analyzingKw === kw;
 
                 return (
                   <div
-                    key={kw}
+                    key={`${kw}-${idx}`}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1fr 180px",
+                      gridTemplateColumns: "1fr 140px 220px",
                       alignItems: "center",
                       padding: "12px 20px",
                       borderBottom: "1px solid #f1f2f3",
@@ -692,31 +810,48 @@ export default function Keywords() {
                         label=""
                         labelHidden
                         checked={isChecked}
-                        onChange={() => handleToggleSelectRow(kw)}
+                        onChange={() => handleToggleSelectRow(item)}
                       />
-                      <span style={{ fontSize: "13.5px", color: "#202223", fontWeight: 400 }}>
+                      <span style={{ fontSize: "13.5px", color: "#202223", fontWeight: 500 }}>
                         {kw}
                       </span>
                     </div>
 
-                    <div style={{ textAlign: "right" }}>
+                    <div style={{ textAlign: "center" }}>
+                      <Badge tone={getIntentTone(intent)}>
+                        {intent}
+                      </Badge>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px" }}>
+                      <Button
+                        size="slim"
+                        icon={MagicIcon}
+                        loading={isThisAnalyzing}
+                        onClick={() => handleAnalyzeBrief(item)}
+                      >
+                        Analyze Brief
+                      </Button>
+
                       {isAdded ? (
                         <div
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "6px",
+                            gap: "4px",
                             color: "#108043",
-                            fontSize: "13px",
+                            fontSize: "12.5px",
                             fontWeight: 500,
+                            minWidth: "90px",
+                            justifyContent: "flex-end",
                           }}
                         >
                           <Icon source={CheckCircleIcon} tone="success" />
-                          <span>Keyword added</span>
+                          <span>Added</span>
                         </div>
                       ) : (
-                        <Button size="slim" onClick={() => handleAddKeyword(kw)}>
-                          Add keyword
+                        <Button size="slim" onClick={() => handleAddKeyword(item)}>
+                          Add
                         </Button>
                       )}
                     </div>
@@ -726,6 +861,14 @@ export default function Keywords() {
             </div>
           </div>
         )}
+
+        {/* Content Brief Modal */}
+        <ContentBriefModal
+          open={isBriefModalOpen}
+          onClose={() => setIsBriefModalOpen(false)}
+          brief={activeBrief}
+          onUseInStudio={handleUseBriefInStudio}
+        />
       </BlockStack>
     </div>
   );
