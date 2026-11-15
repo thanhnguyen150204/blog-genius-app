@@ -22,10 +22,12 @@ connectDB();
 import blogRoutes from "./route/blog.route.js";
 import shopRoutes from "./route/shop.route.js";
 import aiRoutes from "./route/ai.route.js";
+import aiResearchRoutes from "./route/aiResearch.route.js";
 
 app.use("/api/blogs", blogRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/ai/research", aiResearchRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Blog Genius API is running!" });
