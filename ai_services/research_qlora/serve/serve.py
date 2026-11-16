@@ -10,8 +10,11 @@ import json
 import logging
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Optional, Dict, Any, List
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
