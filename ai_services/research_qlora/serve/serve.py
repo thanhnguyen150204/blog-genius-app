@@ -114,6 +114,7 @@ def load_model_if_possible():
             BASE_MODEL_NAME,
             torch_dtype=torch_dtype,
             device_map="auto" if device_name == "cuda" else None,
+            low_cpu_mem_usage=True,
             trust_remote_code=True,
         )
         if device_name == "cpu":

@@ -59,7 +59,7 @@ router.post("/keywords", async (req, res, next) => {
     // Call FastAPI service
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
+      const timeout = setTimeout(() => controller.abort(), 90000);
 
       const response = await fetch(`${AI_SERVE_URL}/api/research/keywords`, {
         method: "POST",
@@ -139,7 +139,7 @@ router.post("/brief", async (req, res, next) => {
     // Call FastAPI service
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 25000);
+      const timeout = setTimeout(() => controller.abort(), 120000);
 
       const response = await fetch(`${AI_SERVE_URL}/api/research/brief`, {
         method: "POST",
