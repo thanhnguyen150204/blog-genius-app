@@ -238,13 +238,11 @@ export function TrendingIdeasCard() {
               </BlockStack>
 
               <Button
-                variant="plain"
-                onClick={() => navigate("/keywords")}
+                variant="secondary"
+                icon={MagicIcon}
+                onClick={() => navigate("/content-ideas")}
               >
-                <InlineStack gap="050" blockAlign="center">
-                  <span>Keywords research</span>
-                  <Icon source={ChevronRightIcon} />
-                </InlineStack>
+                Content idea
               </Button>
             </InlineStack>
 
@@ -353,7 +351,7 @@ export function TrendingIdeasCard() {
               <Button
                 size="slim"
                 variant="plain"
-                onClick={() => navigate("/keywords")}
+                onClick={() => navigate("/content-ideas")}
               >
                 <InlineStack gap="050" blockAlign="center">
                   <span>Explore all</span>
