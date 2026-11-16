@@ -312,7 +312,7 @@ def generate_content_brief(req: ContentBriefRequest):
     if req.known_intent:
         user_prompt += f"\nIntent: {req.known_intent}"
 
-    result = run_qlora_inference(SYSTEM_CB, user_prompt, max_new_tokens=850)
+    result = run_qlora_inference(SYSTEM_CB, user_prompt, max_new_tokens=550)
 
     # Check validity of required fields
     if not result or "primary_keyword" not in result or "geo_blueprint" not in result:
