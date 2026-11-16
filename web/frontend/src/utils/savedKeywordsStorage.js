@@ -1,20 +1,13 @@
-const STORAGE_KEY = "blog_genius_saved_keywords";
+const STORAGE_KEY = "blog_genius_saved_keywords_v2";
 
-const DEFAULT_SAVED_KEYWORDS = [
-  "Vietnamese gifts",
-  "Mother and baby care",
-  "organic baby clothes online",
-  "postpartum essentials for moms",
-  "safe baby skincare products",
-  "maternity fashion trends 2026",
-];
+const DEFAULT_SAVED_KEYWORDS = [];
 
 export function getSavedKeywords() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
