@@ -86,16 +86,27 @@ router.post("/keywords", async (req, res, next) => {
     }
 
     // Fallback keyword generation if FastAPI is offline
+    const isEn = language.toLowerCase().startsWith("en");
     const cleanTopic = (seed_keyword || niche).trim();
-    const fallbackKeywords = [
-      { keyword: `${cleanTopic} là gì`, intent: "Informational", search_volume: 2400, competition_level: "LOW", cpc: 0.45 },
-      { keyword: `hướng dẫn sử dụng ${cleanTopic} chi tiết`, intent: "Informational", search_volume: 1800, competition_level: "LOW", cpc: 0.35 },
-      { keyword: `đánh giá ${cleanTopic} tốt nhất 2026`, intent: "Commercial", search_volume: 3200, competition_level: "MEDIUM", cpc: 0.85 },
-      { keyword: `so sánh các loại ${cleanTopic}`, intent: "Commercial", search_volume: 1400, competition_level: "MEDIUM", cpc: 0.65 },
-      { keyword: `mua ${cleanTopic} chính hãng giá tốt`, intent: "Transactional", search_volume: 4100, competition_level: "HIGH", cpc: 1.25 },
-      { keyword: `bảng giá ${cleanTopic} mới nhất`, intent: "Transactional", search_volume: 2100, competition_level: "HIGH", cpc: 1.10 },
-      { keyword: `cửa hàng ${cleanTopic} uy tín gần đây`, intent: "Navigational", search_volume: 950, competition_level: "LOW", cpc: 0.50 },
-    ];
+    const fallbackKeywords = isEn
+      ? [
+          { keyword: `what is ${cleanTopic}`, intent: "Informational", search_volume: 2400, competition_level: "LOW", cpc: 0.45 },
+          { keyword: `how to choose the best ${cleanTopic}`, intent: "Informational", search_volume: 1800, competition_level: "LOW", cpc: 0.35 },
+          { keyword: `top rated ${cleanTopic} reviews 2026`, intent: "Commercial", search_volume: 3200, competition_level: "MEDIUM", cpc: 0.85 },
+          { keyword: `compare ${cleanTopic} brands and features`, intent: "Commercial", search_volume: 1400, competition_level: "MEDIUM", cpc: 0.65 },
+          { keyword: `buy ${cleanTopic} online best deals`, intent: "Transactional", search_volume: 4100, competition_level: "HIGH", cpc: 1.25 },
+          { keyword: `affordable ${cleanTopic} price guide`, intent: "Transactional", search_volume: 2100, competition_level: "HIGH", cpc: 1.10 },
+          { keyword: `${cleanTopic} official store near me`, intent: "Navigational", search_volume: 950, competition_level: "LOW", cpc: 0.50 },
+        ]
+      : [
+          { keyword: `${cleanTopic} là gì`, intent: "Informational", search_volume: 2400, competition_level: "LOW", cpc: 0.45 },
+          { keyword: `hướng dẫn sử dụng ${cleanTopic} chi tiết`, intent: "Informational", search_volume: 1800, competition_level: "LOW", cpc: 0.35 },
+          { keyword: `đánh giá ${cleanTopic} tốt nhất 2026`, intent: "Commercial", search_volume: 3200, competition_level: "MEDIUM", cpc: 0.85 },
+          { keyword: `so sánh các loại ${cleanTopic}`, intent: "Commercial", search_volume: 1400, competition_level: "MEDIUM", cpc: 0.65 },
+          { keyword: `mua ${cleanTopic} chính hãng giá tốt`, intent: "Transactional", search_volume: 4100, competition_level: "HIGH", cpc: 1.25 },
+          { keyword: `bảng giá ${cleanTopic} mới nhất`, intent: "Transactional", search_volume: 2100, competition_level: "HIGH", cpc: 1.10 },
+          { keyword: `cửa hàng ${cleanTopic} uy tín gần đây`, intent: "Navigational", search_volume: 950, competition_level: "LOW", cpc: 0.50 },
+        ];
 
     return res.status(200).json({
       success: true,

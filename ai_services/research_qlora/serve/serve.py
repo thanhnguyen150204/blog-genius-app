@@ -233,16 +233,31 @@ def research_keywords(req: KeywordResearchRequest):
     raw_kws = result.get("keywords", [])
 
     if not raw_kws:
-        # Generate intelligent defaults for the requested niche
+        # Generate intelligent defaults for the requested niche & language
+        is_en = req.language.lower().startswith("en")
         niche_clean = req.niche.replace("&", "").strip()
-        raw_kws = [
-            {"keyword": f"{req.seed_keyword or niche_clean} là gì", "intent": "Informational"},
-            {"keyword": f"hướng dẫn sử dụng {req.seed_keyword or niche_clean}", "intent": "Informational"},
-            {"keyword": f"top {req.seed_keyword or niche_clean} tốt nhất hiện nay", "intent": "Commercial"},
-            {"keyword": f"so sánh các loại {req.seed_keyword or niche_clean}", "intent": "Commercial"},
-            {"keyword": f"mua {req.seed_keyword or niche_clean} chính hãng giá rẻ", "intent": "Transactional"},
-            {"keyword": f"báo giá {req.seed_keyword or niche_clean} mới nhất", "intent": "Transactional"},
-        ]
+        seed = req.seed_keyword or niche_clean
+
+        if is_en:
+            raw_kws = [
+                {"keyword": f"what is {seed}", "intent": "Informational"},
+                {"keyword": f"how to choose the best {seed}", "intent": "Informational"},
+                {"keyword": f"top rated {seed} reviews 2026", "intent": "Commercial"},
+                {"keyword": f"compare {seed} brands and features", "intent": "Commercial"},
+                {"keyword": f"buy {seed} online best deals", "intent": "Transactional"},
+                {"keyword": f"affordable {seed} price guide", "intent": "Transactional"},
+                {"keyword": f"{seed} official store near me", "intent": "Navigational"},
+            ]
+        else:
+            raw_kws = [
+                {"keyword": f"{seed} là gì", "intent": "Informational"},
+                {"keyword": f"hướng dẫn sử dụng {seed}", "intent": "Informational"},
+                {"keyword": f"top {seed} tốt nhất hiện nay", "intent": "Commercial"},
+                {"keyword": f"so sánh các loại {seed}", "intent": "Commercial"},
+                {"keyword": f"mua {seed} chính hãng giá rẻ", "intent": "Transactional"},
+                {"keyword": f"báo giá {seed} mới nhất", "intent": "Transactional"},
+                {"keyword": f"cửa hàng {seed} chính hãng uy tín", "intent": "Navigational"},
+            ]
 
     # Map to schema KeywordItem with realistic search volume and CPC
     import random
@@ -293,37 +308,73 @@ def generate_content_brief(req: ContentBriefRequest):
 
     # Check validity of required fields
     if not result or "primary_keyword" not in result or "geo_blueprint" not in result:
-        # Fallback template with complete E-E-A-T and GEO structure
+        # Fallback template with complete E-E-A-T and GEO structure matching requested language
+        is_en = req.language.lower().startswith("en")
         intent = req.known_intent or "Commercial"
-        result = {
-            "primary_keyword": req.primary_keyword,
-            "secondary_keywords": [
-                f"{req.primary_keyword} uy tín",
-                f"đánh giá {req.primary_keyword}",
-                f"kinh nghiệm chọn {req.primary_keyword}",
-            ],
-            "dominant_intent": intent,
-            "funnel_stage": "MOFU" if intent == "Commercial" else ("BOFU" if intent == "Transactional" else "TOFU"),
-            "recommended_content_type": "Buyer's Guide" if intent in ["Commercial", "Transactional"] else "In-depth Guide",
-            "recommended_style": "Persuasive & Insightful",
-            "recommended_tone": "Authoritative & Objective",
-            "target_audience": f"Độc giả và khách hàng đang tìm kiếm giải pháp liên quan đến {req.primary_keyword} chất lượng cao.",
-            "key_talking_points": [
-                f"Phân tích chuyên sâu về các tiêu chuẩn cốt lõi khi tìm kiếm {req.primary_keyword} theo dữ liệu thị trường mới nhất.",
-                f"Đánh giá rủi ro và các sai lầm phổ biến người tiêu dùng thường gặp phải.",
-                f"Chứng chỉ chất lượng và bằng chứng thử nghiệm thực tế chứng minh hiệu quả vượt trội.",
-            ],
-            "geo_blueprint": {
-                "answer_block_focus": f"Tóm tắt trực diện: Để tối ưu hóa lựa chọn {req.primary_keyword}, người dùng nên ưu tiên các tiêu chuẩn kiểm định an toàn, độ bền và tỷ lệ chi phí trên hiệu năng thực tế.",
-                "comparison_table_idea": f"Bảng so sánh chi tiết ma trận tính năng giữa các phương án {req.primary_keyword} phổ biến dựa trên độ bền, giá cả và bảo hành.",
-                "faq_questions": [
-                    f"Tiêu chí quan trọng nhất khi đánh giá {req.primary_keyword} là gì?",
-                    f"Có nên đầu tư vào {req.primary_keyword} cao cấp không?",
+        kw = req.primary_keyword
+
+        if is_en:
+            result = {
+                "primary_keyword": kw,
+                "secondary_keywords": [
+                    f"best {kw} for beginners",
+                    f"{kw} buying guide",
+                    f"top rated {kw} comparison",
+                    f"affordable {kw} deals",
                 ],
-            },
-            "suggested_cta": f"Khám phá ngay danh mục {req.primary_keyword} chất lượng nhất hôm nay để nhận ưu đãi độc quyền!",
-            "target_word_count": 1800,
-        }
+                "dominant_intent": intent,
+                "funnel_stage": "MOFU" if intent == "Commercial" else ("BOFU" if intent == "Transactional" else "TOFU"),
+                "recommended_content_type": "Buyer's Guide" if intent in ["Commercial", "Transactional"] else "In-depth Guide",
+                "recommended_style": "Persuasive & Analytical",
+                "recommended_tone": "Authoritative & Objective",
+                "target_audience": f"Shoppers and fitness enthusiasts actively searching for reliable, high-performance {kw} solutions.",
+                "key_talking_points": [
+                    f"Industry benchmarks and core evaluation criteria for selecting {kw} in 2026.",
+                    f"Common buyer pitfalls and low-quality warning signs to avoid.",
+                    f"Verified lab certifications, durability test results, and long-term cost-efficiency.",
+                ],
+                "geo_blueprint": {
+                    "answer_block_focus": f"Direct Summary: When evaluating {kw}, buyers should prioritize certified manufacturing standards, proven durability, and verified warranty over superficial marketing claims.",
+                    "comparison_table_idea": f"A comprehensive comparison matrix benchmarking leading {kw} alternatives across durability, price point, warranty, and customer satisfaction.",
+                    "faq_questions": [
+                        f"What should I look for when buying {kw}?",
+                        f"Is investing in premium {kw} worth the cost?",
+                        f"How do I maintain and extend the lifespan of {kw}?",
+                    ],
+                },
+                "suggested_cta": f"Explore our handpicked collection of certified {kw} today and claim exclusive savings!",
+                "target_word_count": 1800,
+            }
+        else:
+            result = {
+                "primary_keyword": kw,
+                "secondary_keywords": [
+                    f"{kw} chính hãng",
+                    f"đánh giá {kw}",
+                    f"kinh nghiệm chọn {kw}",
+                ],
+                "dominant_intent": intent,
+                "funnel_stage": "MOFU" if intent == "Commercial" else ("BOFU" if intent == "Transactional" else "TOFU"),
+                "recommended_content_type": "Buyer's Guide" if intent in ["Commercial", "Transactional"] else "In-depth Guide",
+                "recommended_style": "Persuasive & Insightful",
+                "recommended_tone": "Authoritative & Objective",
+                "target_audience": f"Độc giả và khách hàng đang tìm kiếm giải pháp liên quan đến {kw} chất lượng cao.",
+                "key_talking_points": [
+                    f"Phân tích chuyên sâu về các tiêu chuẩn cốt lõi khi tìm kiếm {kw} theo dữ liệu thị trường mới nhất.",
+                    f"Đánh giá rủi ro và các sai lầm phổ biến người tiêu dùng thường gặp phải.",
+                    f"Chứng chỉ chất lượng và bằng chứng thử nghiệm thực tế chứng minh hiệu quả vượt trội.",
+                ],
+                "geo_blueprint": {
+                    "answer_block_focus": f"Tóm tắt trực diện: Để tối ưu hóa lựa chọn {kw}, người dùng nên ưu tiên các tiêu chuẩn kiểm định an toàn, độ bền và tỷ lệ chi phí trên hiệu năng thực tế.",
+                    "comparison_table_idea": f"Bảng so sánh chi tiết ma trận tính năng giữa các phương án {kw} phổ biến dựa trên độ bền, giá cả và bảo hành.",
+                    "faq_questions": [
+                        f"Tiêu chí quan trọng nhất khi đánh giá {kw} là gì?",
+                        f"Có nên đầu tư vào {kw} cao cấp không?",
+                    ],
+                },
+                "suggested_cta": f"Khám phá ngay danh mục {kw} chất lượng nhất hôm nay để nhận ưu đãi độc quyền!",
+                "target_word_count": 1800,
+            }
 
     geo_data = result.get("geo_blueprint", {})
     geo_bp = GeoBlueprint(
