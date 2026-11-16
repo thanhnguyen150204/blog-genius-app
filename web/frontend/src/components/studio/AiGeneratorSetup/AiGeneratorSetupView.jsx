@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BlockStack,
   InlineStack,
@@ -18,7 +18,7 @@ import { PostTitleAndOutlineSettings } from "./PostTitleAndOutlineSettings";
 import { getSavedKeywords } from "../../../utils/savedKeywordsStorage";
 import { ProductPicker, CollectionPicker } from "../../common";
 
-export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
+export function AiGeneratorSetupView({ onBack, onCompleteGeneration, initialBrief }) {
   const [language, setLanguage] = useState("English(US)");
   const [writingStyle, setWritingStyle] = useState("Default");
   const [voiceTone, setVoiceTone] = useState("Default");
@@ -48,6 +48,33 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
 
   const [errors, setErrors] = useState({ keywords: false, title: false });
+
+  // Auto pre-fill from Content Brief when navigated from Keywords page (Module 1 -> Module 2)
+  useEffect(() => {
+    if (initialBrief) {
+      if (initialBrief.primary_keyword) {
+        const kws = [
+          initialBrief.primary_keyword,
+          ...(initialBrief.secondary_keywords || []),
+        ];
+        setKeywords(kws);
+        setTitle(`The Comprehensive Guide to ${initialBrief.primary_keyword}`);
+        setErrors((prev) => ({ ...prev, keywords: false, title: false }));
+      }
+      if (initialBrief.target_audience) {
+        setTargetCustomer(initialBrief.target_audience);
+      }
+      if (initialBrief.geo_blueprint?.answer_block_focus) {
+        setInsertSectionSummary(true);
+      }
+      if (initialBrief.recommended_style) {
+        setWritingStyle(initialBrief.recommended_style);
+      }
+      if (initialBrief.recommended_tone) {
+        setVoiceTone(initialBrief.recommended_tone);
+      }
+    }
+  }, [initialBrief]);
 
   const handleKeywordsChange = (newKeywords) => {
     setKeywords(newKeywords);

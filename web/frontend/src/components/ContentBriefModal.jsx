@@ -263,3 +263,4 @@ export function ContentBriefModal({ open, onClose, brief, onUseInStudio, loading
   );
 }
 export default ContentBriefModal;
+

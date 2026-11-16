@@ -83,3 +83,4 @@ class HealthResponse(BaseModel):
     device: str = "cpu"
     adapter_path: str = ""
     lora_enabled: bool = False
+
