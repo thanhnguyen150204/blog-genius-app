@@ -46,7 +46,11 @@ export default defineConfig({
     port: parseInt(process.env.FRONTEND_PORT) || 8002,
     hmr: hmrConfig,
     proxy: {
-      "^/api(/|(\\?.*)?$)": "http://localhost:3001",
+      "^/api(/|(\\?.*)?$)": {
+        target: `http://127.0.0.1:${process.env.BACKEND_PORT || 3001}`,
+        changeOrigin: false,
+        secure: false,
+      },
     },
   },
 });
