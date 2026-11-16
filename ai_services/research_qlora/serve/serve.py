@@ -122,6 +122,10 @@ def load_model_if_possible():
         )
         if device_name == "cpu":
             base_model = base_model.to("cpu")
+            import os
+            num_threads = min(os.cpu_count() or 4, 8)
+            torch.set_num_threads(num_threads)
+            logger.info(f"Configured PyTorch CPU threads: {num_threads}")
 
         if (ADAPTER_DIR / "adapter_config.json").exists():
             logger.info(f"Applying LoRA adapter from {ADAPTER_DIR}...")
@@ -233,7 +237,7 @@ def research_keywords(req: KeywordResearchRequest):
     if req.seed_keyword:
         user_prompt += f"\nSeed: {req.seed_keyword}"
 
-    result = run_qlora_inference(SYSTEM_KW, user_prompt, max_new_tokens=512)
+    result = run_qlora_inference(SYSTEM_KW, user_prompt, max_new_tokens=220)
     raw_kws = result.get("keywords", [])
 
     if not raw_kws:
