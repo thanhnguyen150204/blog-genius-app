@@ -10,6 +10,7 @@ import { ScratchSidebarSeo } from "./ScratchBuilder/ScratchSidebarSeo";
 import { ScratchSidebarExport } from "./ScratchBuilder/ScratchSidebarExport";
 import { ScratchCanvas } from "./ScratchBuilder/ScratchCanvas";
 import { ScratchImageLibraryModal } from "./ScratchBuilder/ScratchImageLibraryModal";
+import { ElementInspectorSidebar } from "./ScratchBuilder/elements/ElementInspectorSidebar";
 
 export function ScratchBuilderView({
   onBack,
@@ -372,6 +373,7 @@ export function ScratchBuilderView({
   const [historyIndex, setHistoryIndex] = useState(0);
 
   const [activeTab, setActiveTab] = useState("post");
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState(null);
   const [viewport, setViewport] = useState("desktop");
   const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false);
   const [isAiImageModalOpen, setIsAiImageModalOpen] = useState(false);
@@ -427,11 +429,41 @@ export function ScratchBuilderView({
     }
   };
 
-  const handleInsertBlock = (payload) => {
+  const handleInsertBlock = (payload, targetIndex = null) => {
     const newBlock = { ...payload, id: `block-${Date.now()}` };
-    const updatedBlocks = [...blocks, newBlock];
+    const insertAt =
+      targetIndex !== null
+        ? targetIndex + 1
+        : selectedBlockIndex !== null
+        ? selectedBlockIndex + 1
+        : blocks.length;
+
+    const updatedBlocks = [
+      ...blocks.slice(0, insertAt),
+      newBlock,
+      ...blocks.slice(insertAt),
+    ];
     setBlocks(updatedBlocks);
     pushHistory(postData, updatedBlocks);
+    setSelectedBlockIndex(insertAt);
+    setActiveTab("post");
+  };
+
+  const handleDuplicateBlock = (index) => {
+    if (index < 0 || index >= blocks.length) return;
+    const blockToCopy = blocks[index];
+    const duplicatedBlock = {
+      ...JSON.parse(JSON.stringify(blockToCopy)),
+      id: `block-${Date.now()}`,
+    };
+    const updatedBlocks = [
+      ...blocks.slice(0, index + 1),
+      duplicatedBlock,
+      ...blocks.slice(index + 1),
+    ];
+    setBlocks(updatedBlocks);
+    pushHistory(postData, updatedBlocks);
+    setSelectedBlockIndex(index + 1);
   };
 
   const handleUpdateBlock = (index, updatedBlock) => {
@@ -444,6 +476,11 @@ export function ScratchBuilderView({
     const updatedBlocks = blocks.filter((_, i) => i !== index);
     setBlocks(updatedBlocks);
     pushHistory(postData, updatedBlocks);
+    if (selectedBlockIndex === index) {
+      setSelectedBlockIndex(null);
+    } else if (selectedBlockIndex > index) {
+      setSelectedBlockIndex(selectedBlockIndex - 1);
+    }
   };
 
   const handleMoveUp = (index) => {
@@ -609,13 +646,25 @@ export function ScratchBuilderView({
         <ScratchLeftRail activeTab={activeTab} onSelectTab={setActiveTab} />
 
         {activeTab === "post" && (
-          <ScratchSidebarPostSettings
-            postData={postData}
-            onChange={handlePostDataChange}
-            onOpenLibraryModal={() => setIsLibraryModalOpen(true)}
-            onOpenAiImageModal={() => setIsAiImageModalOpen(true)}
-            isEditMode={Boolean(initialPost)}
-          />
+          selectedBlockIndex !== null && blocks[selectedBlockIndex] ? (
+            <ElementInspectorSidebar
+              block={blocks[selectedBlockIndex]}
+              onUpdateBlock={(updated) => handleUpdateBlock(selectedBlockIndex, updated)}
+              onBack={() => setSelectedBlockIndex(null)}
+              onDeleteBlock={() => handleDeleteBlock(selectedBlockIndex)}
+              onDuplicateBlock={() => handleDuplicateBlock(selectedBlockIndex)}
+              onOpenLibraryModal={() => setIsLibraryModalOpen(true)}
+              onOpenAiImageModal={() => setIsAiImageModalOpen(true)}
+            />
+          ) : (
+            <ScratchSidebarPostSettings
+              postData={postData}
+              onChange={handlePostDataChange}
+              onOpenLibraryModal={() => setIsLibraryModalOpen(true)}
+              onOpenAiImageModal={() => setIsAiImageModalOpen(true)}
+              isEditMode={Boolean(initialPost)}
+            />
+          )
         )}
 
         {activeTab === "elements" && (
@@ -649,9 +698,19 @@ export function ScratchBuilderView({
           onUpdateBlock={handleUpdateBlock}
           onDeleteBlock={handleDeleteBlock}
           onInsertBlock={handleInsertBlock}
+          onDuplicateBlock={handleDuplicateBlock}
+          onMoveUp={handleMoveUp}
+          onMoveDown={handleMoveDown}
           onOpenLibraryModal={() => setIsLibraryModalOpen(true)}
           onOpenAiImageModal={() => setIsAiImageModalOpen(true)}
           viewport={viewport}
+          selectedBlockIndex={selectedBlockIndex}
+          onSelectBlock={(idx) => {
+            setSelectedBlockIndex(idx);
+            if (idx !== null) {
+              setActiveTab("post");
+            }
+          }}
         />
       </div>
 

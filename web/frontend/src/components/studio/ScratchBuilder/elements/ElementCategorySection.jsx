@@ -22,10 +22,10 @@ export function ElementCategorySection({
       <div
         style={{
           fontSize: "14px",
-          fontWeight: 600,
-          color: "#18181b",
-          marginBottom: "12px",
-          letterSpacing: "-0.01em",
+          fontWeight: 700,
+          color: "#09090b",
+          marginBottom: "10px",
+          letterSpacing: "-0.015em",
         }}
       >
         {category.title}

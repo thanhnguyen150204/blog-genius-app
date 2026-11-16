@@ -8,7 +8,7 @@ import {
 } from "./elements";
 
 /**
- * ScratchSidebarElements renders the Tapita-inspired Element toolbox panel.
+ * ScratchSidebarElements renders the Element toolbox panel.
  * Each item acts as a modular tool to insert and format blog post content.
  */
 export function ScratchSidebarElements({ onInsertBlock, onSelectTool }) {
