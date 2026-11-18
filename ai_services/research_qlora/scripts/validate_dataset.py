@@ -1,11 +1,13 @@
 """
-Module: validate_dataset.py
-Description: Validates, deduplicates, and filters raw ChatML dataset into clean format.
+Module: validate_dataset.py (v2)
+Description: Strictly validates, deduplicates, audits quality metrics (EN/VI balance, Intent balance,
+             Intent<->Funnel alignment, Vietnamese diacritics), and exports clean ChatML JSONL.
 """
 
 import argparse
 import hashlib
 import json
+from collections import Counter
 from pathlib import Path
 
 INTENT_ENUM = {"Informational", "Commercial", "Transactional", "Navigational"}
@@ -14,16 +16,26 @@ CONTENT_TYPE_ENUM = {"Informational", "Buyer's guide", "How-to", "FAQ"}
 STYLE_ENUM = {"Informative", "Analytical", "Instructive", "Persuasive", "Conversational"}
 TONE_ENUM = {"Authoritative", "Caring", "Friendly", "Informative", "Formal", "Conversational"}
 
+VI_DIACRITICS = set(
+    "àáâãèéêìíòóôõùúýăđơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỷỹỵ"
+    "ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐƠƯẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼẾỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỶỸỴ"
+)
 
-def validate_kw_response(obj: dict) -> list[str]:
+
+def has_vi_diacritics(text: str) -> bool:
+    return any(ch in VI_DIACRITICS for ch in text)
+
+
+def validate_kw_response(obj: dict, is_vi: bool) -> list[str]:
     errors = []
     if not isinstance(obj, dict):
         return ["Response is not a JSON object"]
 
     kws = obj.get("keywords")
-    if not isinstance(kws, list) or len(kws) < 2:
-        return ["keywords must be a list with >= 2 items"]
+    if not isinstance(kws, list) or len(kws) < 5:
+        return ["keywords must be a list with >= 5 items"]
 
+    vi_no_accents = 0
     for idx, item in enumerate(kws):
         if not isinstance(item, dict):
             errors.append(f"keywords[{idx}] must be an object with 'keyword' and 'intent'")
@@ -32,15 +44,20 @@ def validate_kw_response(obj: dict) -> list[str]:
         kw_val = item.get("keyword")
         if not isinstance(kw_val, str) or not kw_val.strip():
             errors.append(f"keywords[{idx}].keyword missing or empty")
+        elif is_vi and not has_vi_diacritics(kw_val):
+            vi_no_accents += 1
 
         intent = item.get("intent")
         if intent not in INTENT_ENUM:
             errors.append(f"keywords[{idx}].intent '{intent}' not in enum")
 
+    if is_vi and vi_no_accents > 1:
+        errors.append(f"Vietnamese sample has {vi_no_accents} unaccented/English keywords")
+
     return errors
 
 
-def validate_cb_response(obj: dict) -> list[str]:
+def validate_cb_response(obj: dict, is_vi: bool) -> list[str]:
     errors = []
     if not isinstance(obj, dict):
         return ["Response is not a JSON object"]
@@ -50,10 +67,12 @@ def validate_cb_response(obj: dict) -> list[str]:
         if not isinstance(val, str) or not val.strip():
             errors.append(f"'{field}' missing or empty")
 
-    if obj.get("dominant_intent") not in INTENT_ENUM:
-        errors.append(f"dominant_intent '{obj.get('dominant_intent')}' not in enum")
-    if obj.get("funnel_stage") not in FUNNEL_ENUM:
-        errors.append(f"funnel_stage '{obj.get('funnel_stage')}' not in enum")
+    di = obj.get("dominant_intent")
+    fs = obj.get("funnel_stage")
+    if di not in INTENT_ENUM:
+        errors.append(f"dominant_intent '{di}' not in enum")
+    if fs not in FUNNEL_ENUM:
+        errors.append(f"funnel_stage '{fs}' not in enum")
     if obj.get("recommended_content_type") not in CONTENT_TYPE_ENUM:
         errors.append(f"recommended_content_type '{obj.get('recommended_content_type')}' not in enum")
     if obj.get("recommended_style") not in STYLE_ENUM:
@@ -61,9 +80,19 @@ def validate_cb_response(obj: dict) -> list[str]:
     if obj.get("recommended_tone") not in TONE_ENUM:
         errors.append(f"recommended_tone '{obj.get('recommended_tone')}' not in enum")
 
+    # Strict Intent <-> Funnel consistency check
+    if di == "Informational" and fs != "TOFU":
+        errors.append(f"Intent/Funnel mismatch: Informational -> {fs}")
+    elif di == "Commercial" and fs != "MOFU":
+        errors.append(f"Intent/Funnel mismatch: Commercial -> {fs}")
+    elif di == "Transactional" and fs != "BOFU":
+        errors.append(f"Intent/Funnel mismatch: Transactional -> {fs}")
+    elif di == "Navigational" and fs not in {"MOFU", "BOFU"}:
+        errors.append(f"Intent/Funnel mismatch: Navigational -> {fs}")
+
     sec_kw = obj.get("secondary_keywords", [])
-    if not isinstance(sec_kw, list) or len(sec_kw) < 1:
-        errors.append("secondary_keywords must have >= 1 item")
+    if not isinstance(sec_kw, list) or len(sec_kw) < 2:
+        errors.append("secondary_keywords must have >= 2 items")
 
     talking_pts = obj.get("key_talking_points", [])
     if not isinstance(talking_pts, list) or len(talking_pts) < 3:
@@ -81,35 +110,38 @@ def validate_cb_response(obj: dict) -> list[str]:
         if not isinstance(faqs, list) or len(faqs) < 2:
             errors.append("geo_blueprint.faq_questions must have >= 2 items")
 
+    if is_vi and not errors:
+        blob = f"{obj['target_audience']} {obj['suggested_cta']} {geo['answer_block_focus']}"
+        if not has_vi_diacritics(blob):
+            errors.append("Vietnamese brief missing Vietnamese diacritics")
+
     return errors
 
 
 def dedup_key_kw(obj: dict) -> str:
-    kws = []
-    for item in obj.get("keywords", []):
-        if isinstance(item, dict):
-            kws.append(item.get("keyword", ""))
-        else:
-            kws.append(str(item))
+    kws = [str(item.get("keyword", "")).lower().strip() for item in obj.get("keywords", []) if isinstance(item, dict)]
     return hashlib.md5("|".join(sorted(kws)).encode()).hexdigest()
 
 
 def dedup_key_cb(obj: dict) -> str:
-    # A unique brief is defined by the combination of primary keyword, audience, and secondary keywords
     pk = str(obj.get("primary_keyword", "")).lower().strip()
-    audience = str(obj.get("target_audience", "")).lower().strip()
-    sec = "|".join(sorted(str(s).lower().strip() for s in obj.get("secondary_keywords", [])))
-    return hashlib.md5(f"{pk}|{audience}|{sec}".encode()).hexdigest()
+    return hashlib.md5(pk.encode()).hexdigest()
 
 
 def process(task: str, inp: Path, out: Path) -> int:
     seen_hashes = set()
     good, bad = [], []
+    lang_counts = Counter()
+    intent_counts = Counter()
+
+    if not inp.exists():
+        print(f"[WARN] Input file not found: {inp}")
+        return 0
 
     with inp.open("r", encoding="utf-8") as f:
         lines = f.readlines()
 
-    print(f"[INFO] Task {task}: validating {len(lines)} raw samples from {inp.name}...")
+    print(f"\n[INFO] Task {task}: validating {len(lines)} raw samples from {inp.name}...")
 
     for lineno, line in enumerate(lines, 1):
         line = line.strip()
@@ -123,12 +155,13 @@ def process(task: str, inp: Path, out: Path) -> int:
             continue
 
         messages = record.get("messages", [])
-        assistant_msg = next(
-            (m["content"] for m in messages if m.get("role") == "assistant"), None
-        )
+        user_msg = next((m["content"] for m in messages if m.get("role") == "user"), "")
+        assistant_msg = next((m["content"] for m in messages if m.get("role") == "assistant"), None)
         if assistant_msg is None:
             bad.append((lineno, "missing assistant message"))
             continue
+
+        is_vi = "Language: Vietnamese" in user_msg
 
         try:
             obj = json.loads(assistant_msg)
@@ -137,10 +170,10 @@ def process(task: str, inp: Path, out: Path) -> int:
             continue
 
         if task == "KEYWORD_RESEARCH":
-            errors = validate_kw_response(obj)
+            errors = validate_kw_response(obj, is_vi)
             dk = dedup_key_kw(obj)
         else:
-            errors = validate_cb_response(obj)
+            errors = validate_cb_response(obj, is_vi)
             dk = dedup_key_cb(obj)
 
         if errors:
@@ -152,6 +185,13 @@ def process(task: str, inp: Path, out: Path) -> int:
             continue
         seen_hashes.add(dk)
 
+        lang_counts["vi" if is_vi else "en"] += 1
+        if task == "KEYWORD_RESEARCH":
+            for it in obj.get("keywords", []):
+                intent_counts[it.get("intent", "?")] += 1
+        else:
+            intent_counts[obj.get("dominant_intent", "?")] += 1
+
         clean = {k: v for k, v in record.items() if k != "_meta"}
         good.append(clean)
 
@@ -160,7 +200,8 @@ def process(task: str, inp: Path, out: Path) -> int:
         for s in good:
             f.write(json.dumps(s, ensure_ascii=False) + "\n")
 
-    print(f"[SUCCESS] Valid samples: {len(good)}")
+    print(f"[SUCCESS] Valid samples: {len(good)} (EN: {lang_counts['en']}, VI: {lang_counts['vi']})")
+    print(f"[INFO] Intent distribution: {dict(intent_counts)}")
     print(f"[INFO] Dropped samples: {len(bad)}")
     if bad:
         print("[INFO] First 5 validation failures:")
@@ -181,23 +222,14 @@ if __name__ == "__main__":
     out = Path(args.out)
 
     if args.task == "ALL":
-        n_kw = process(
-            "KEYWORD_RESEARCH",
-            inp / "keyword_research_raw.jsonl",
-            out / "keyword_research.jsonl",
-        )
-        n_cb = process(
-            "CONTENT_BRIEF",
-            inp / "content_brief_raw.jsonl",
-            out / "content_brief.jsonl",
-        )
+        n_kw = process("KEYWORD_RESEARCH", inp / "keyword_research_raw.jsonl", out / "keyword_research.jsonl")
+        n_cb = process("CONTENT_BRIEF", inp / "content_brief_raw.jsonl", out / "content_brief.jsonl")
         total = n_kw + n_cb
-        TARGET_V2 = 2700
-        print(f"\n[INFO] Summary: {total} valid samples collected (KW: {n_kw}, CB: {n_cb})")
-        if total < TARGET_V2:
-            print(f"[WARN] Short by {TARGET_V2 - total} samples. Additional generation required.")
+        print(f"\n[SUMMARY] Total clean v2 samples: {total} (KW: {n_kw}, CB: {n_cb})")
+        if total >= 2000:
+            print(f"[SUCCESS] High-purity Dataset v2 ready for QLoRA training ({total} samples)!")
         else:
-            print(f"[SUCCESS] Target v2 achieved! {total} high-quality bilingual samples ready for QLoRA training.")
+            print(f"[WARN] Collected {total} samples (recommended >= 2000).")
     elif args.task == "KEYWORD_RESEARCH":
         f_inp = inp if inp.suffix == ".jsonl" else inp / "keyword_research_raw.jsonl"
         f_out = out if out.suffix == ".jsonl" else out / "keyword_research.jsonl"

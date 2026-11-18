@@ -52,35 +52,86 @@ app.add_middleware(
 BASE_MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 ADAPTER_DIR = Path(__file__).resolve().parent / "adapter"
 
-SYSTEM_KW = (
-    "You are an expert SEO & GEO research analyst.\n"
-    "Given a niche, language, and optional seed keyword, generate a high-performing list of keywords with search intent classification.\n"
-    "Output MUST be valid JSON only matching schema:\n"
-    '{"keywords": [{"keyword": "...", "intent": "Informational|Commercial|Transactional|Navigational"}]}'
-)
+SYSTEM_KW = """You are an expert SEO & GEO (Generative Engine Optimization) analyst for Shopify e-commerce blogs.
+Given a niche or topic, language, and optional business context, return ONLY a JSON object (no markdown, no explanation) in this exact schema:
+{
+  "keywords": [
+    { "keyword": "<string>", "intent": "Informational | Commercial | Transactional | Navigational" }
+  ]
+}
+Rules:
+- Return 6-9 keyword objects covering diverse search intents.
+- keyword: 2-7 words, natural search query style with accurate spelling and full diacritics.
+- intent must strictly follow these rules:
+  * Transactional: explicit buying, ordering, pricing, or deal intent (buy, order, price, deal, discount, mua, bán, giá, đặt mua, khuyến mãi, báo giá).
+  * Commercial: comparing, reviewing, or researching products before buying (best, top, review, vs, compare, đánh giá, so sánh, tốt nhất, nên mua, loại nào tốt, product + audience/budget).
+  * Informational: learning, how-to guides, tips, definitions, troubleshooting (how to, what is, why, tips, guide, cách, hướng dẫn, là gì, tại sao, kinh nghiệm, bảo quản).
+  * Navigational: searching for a specific brand, official website, or store location (official store, website, login, cửa hàng, đại lý chính hãng, trang chủ + brand name).
+- No volume, KD, or CPC fields — only keyword + intent.
+- Language of keywords must strictly match the Language parameter."""
 
-SYSTEM_CB = (
-    "You are an expert SEO & GEO content strategist.\n"
-    "Analyze the given primary keyword, niche, and intent. Produce a comprehensive, high-ranking Content Brief optimized for traditional search engines and AI generative engines (GEO).\n"
-    "Output MUST be valid JSON only matching schema:\n"
-    "{\n"
-    '  "primary_keyword": "...",\n'
-    '  "secondary_keywords": ["...", "...", "..."],\n'
-    '  "dominant_intent": "Informational|Commercial|Transactional|Navigational",\n'
-    '  "funnel_stage": "TOFU|MOFU|BOFU",\n'
-    '  "recommended_content_type": "...",\n'
-    '  "recommended_style": "...",\n'
-    '  "recommended_tone": "...",\n'
-    '  "target_audience": "...",\n'
-    '  "key_talking_points": ["...", "...", "..."],\n'
-    '  "geo_blueprint": {\n'
-    '    "answer_block_focus": "...",\n'
-    '    "comparison_table_idea": "...",\n'
-    '    "faq_questions": ["...", "..."]\n'
-    "  },\n"
-    '  "suggested_cta": "..."\n'
-    "}"
-)
+SYSTEM_CB = """You are an expert SEO & GEO content strategist for Shopify e-commerce blogs.
+Given a primary keyword and optional context, return ONLY a JSON object (no markdown, no explanation) in this exact schema:
+{
+  "primary_keyword": "<string>",
+  "secondary_keywords": ["<string>", ...],
+  "dominant_intent": "Informational | Commercial | Transactional | Navigational",
+  "funnel_stage": "TOFU | MOFU | BOFU",
+  "recommended_content_type": "Informational | Buyer's guide | How-to | FAQ",
+  "recommended_style": "Informative | Analytical | Instructive | Persuasive | Conversational",
+  "recommended_tone": "Authoritative | Caring | Friendly | Informative | Formal | Conversational",
+  "target_audience": "<string>",
+  "key_talking_points": ["<string with E-E-A-T: stat or credential>", ...],
+  "geo_blueprint": {
+    "answer_block_focus": "<string>",
+    "comparison_table_idea": "<string>",
+    "faq_questions": ["<question>", "<question>"]
+  },
+  "suggested_cta": "<string>"
+}
+Rules:
+- secondary_keywords: 2-4 semantically related keywords.
+- key_talking_points: 3-5 items, each containing an E-E-A-T signal (stat, study, certification, or expert benchmark).
+- faq_questions: 2-4 conversational AI-search questions.
+- Intent-to-Funnel alignment: Informational->TOFU, Commercial->MOFU, Transactional->BOFU, Navigational->MOFU or BOFU.
+- If Known intent is provided, dominant_intent must match it.
+- All enum fields must use exactly one listed value.
+- Language of all text fields must strictly match the Language parameter with accurate spelling and diacritics."""
+
+
+def refine_search_intent(kw: str, suggested_intent: str) -> str:
+    """Lightweight guardrail: fixes only unmistakable intent contradictions."""
+    kw_lower = kw.lower().strip()
+
+    # 1. Explicit Informational prefixes (must take precedence over 'mua' inside 'cách chọn mua')
+    informational_prefixes = (
+        "cách ", "hướng dẫn ", "kinh nghiệm ", "tại sao ", "là gì", "how to ", "what is ", "why "
+    )
+    if kw_lower.startswith(informational_prefixes) or kw_lower.endswith(" là gì"):
+        return SearchIntent.INFORMATIONAL.value
+
+    # 2. Explicit Commercial investigation phrases (must take precedence over 'nên mua')
+    commercial_phrases = (
+        "nên mua", "có nên mua", "đánh giá ", "review ", "so sánh ", "top ", "tốt nhất",
+        "loại nào tốt", "best ", " vs ", " versus ", "compare ", "comparison"
+    )
+    if any(p in kw_lower for p in commercial_phrases):
+        return SearchIntent.COMMERCIAL.value
+
+    # 3. Explicit Transactional buying/pricing cues
+    transactional_cues = (
+        "mua ", "đặt mua", "báo giá", "bảng giá", "giá rẻ", "khuyến mãi", "mã giảm giá",
+        "buy ", "order ", "for sale", "discount", "coupon", "price "
+    )
+    if any(cue in kw_lower for cue in transactional_cues):
+        return SearchIntent.TRANSACTIONAL.value
+
+    # 4. Keep model's prediction if valid
+    for member in SearchIntent:
+        if member.value.lower() == suggested_intent.lower():
+            return member.value
+
+    return SearchIntent.COMMERCIAL.value
 
 # Runtime state
 model = None
@@ -196,7 +247,8 @@ def run_qlora_inference(system: str, user_prompt: str, max_new_tokens: int = 768
                 generated_ids = model.generate(
                     **inputs,
                     max_new_tokens=max_new_tokens,
-                    temperature=0.6,
+                    temperature=0.2,
+                    top_p=0.85,
                     do_sample=True,
                     pad_token_id=tokenizer.eos_token_id,
                 )
@@ -233,11 +285,16 @@ def health_check():
 
 @app.post("/api/research/keywords", response_model=KeywordResearchResponse)
 def research_keywords(req: KeywordResearchRequest):
-    user_prompt = f"Niche: {req.niche}\nLanguage: {req.language}"
-    if req.seed_keyword:
-        user_prompt += f"\nSeed: {req.seed_keyword}"
+    lang_full = "English (US)" if req.language.lower().startswith("en") else "Vietnamese"
+    parts = [f"Niche: {req.niche.strip()}", f"Language: {lang_full}"]
+    if req.business_desc:
+        parts.append(f"Business description: {req.business_desc.strip()}")
+    if req.target_customer:
+        parts.append(f"Target customer: {req.target_customer.strip()}")
+    parts.append("Generate a keyword list for this niche.")
+    user_prompt = "\n".join(parts)
 
-    result = run_qlora_inference(SYSTEM_KW, user_prompt, max_new_tokens=220)
+    result = run_qlora_inference(SYSTEM_KW, user_prompt, max_new_tokens=280)
     raw_kws = result.get("keywords", [])
 
     if not raw_kws:
@@ -282,13 +339,12 @@ def research_keywords(req: KeywordResearchRequest):
         if not kw_str:
             continue
 
-        if intent_str not in [i.value for i in SearchIntent]:
-            intent_str = SearchIntent.INFORMATIONAL.value
+        intent_val = refine_search_intent(kw_str, intent_str)
 
         processed_kws.append(
             KeywordItem(
                 keyword=kw_str,
-                intent=SearchIntent(intent_str),
+                intent=SearchIntent(intent_val),
                 search_volume=random.randint(600, 6800),
                 competition_level=random.choice(
                     [CompetitionLevel.LOW, CompetitionLevel.MEDIUM, CompetitionLevel.HIGH]
@@ -306,11 +362,19 @@ def research_keywords(req: KeywordResearchRequest):
 
 @app.post("/api/research/brief", response_model=ContentBriefResponse)
 def generate_content_brief(req: ContentBriefRequest):
-    user_prompt = f"Primary Keyword: {req.primary_keyword}\nLanguage: {req.language}"
+    lang_full = "English (US)" if req.language.lower().startswith("en") else "Vietnamese"
+    parts = [f"Primary keyword: {req.primary_keyword.strip()}"]
     if req.niche:
-        user_prompt += f"\nNiche: {req.niche}"
+        parts.append(f"Niche: {req.niche.strip()}")
+    parts.append(f"Language: {lang_full}")
     if req.known_intent:
-        user_prompt += f"\nIntent: {req.known_intent}"
+        parts.append(f"Known intent: {req.known_intent.strip()}")
+    if req.business_desc:
+        parts.append(f"Business description: {req.business_desc.strip()}")
+    if req.target_customer:
+        parts.append(f"Target customer: {req.target_customer.strip()}")
+    parts.append("Generate a content brief.")
+    user_prompt = "\n".join(parts)
 
     result = run_qlora_inference(SYSTEM_CB, user_prompt, max_new_tokens=550)
 

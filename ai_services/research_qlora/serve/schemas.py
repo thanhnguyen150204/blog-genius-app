@@ -36,10 +36,12 @@ class KeywordItem(BaseModel):
 
 
 class KeywordResearchRequest(BaseModel):
-    niche: str = Field(..., description="Industry niche or topic (e.g., 'Fitness & Supplements', 'Công nghệ AI')")
+    niche: str = Field(..., description="Industry niche or topic (e.g., 'Fitness & Supplements', 'Ghế công thái học')")
     seed_keyword: Optional[str] = Field(None, description="Optional seed keyword to anchor recommendations")
     language: str = Field("vi", description="Language code: 'vi' or 'en'")
     count: int = Field(10, description="Number of keyword suggestions to return")
+    business_desc: Optional[str] = Field(None, description="Optional business description")
+    target_customer: Optional[str] = Field(None, description="Optional target customer description")
 
 
 class KeywordResearchResponse(BaseModel):
@@ -59,6 +61,8 @@ class ContentBriefRequest(BaseModel):
     niche: Optional[str] = Field(None, description="Niche context (optional)")
     known_intent: Optional[str] = Field(None, description="Pre-classified search intent if available")
     language: str = Field("vi", description="Language code: 'vi' or 'en'")
+    business_desc: Optional[str] = Field(None, description="Optional business description")
+    target_customer: Optional[str] = Field(None, description="Optional target customer description")
 
 
 class ContentBriefResponse(BaseModel):
