@@ -192,11 +192,12 @@ if __name__ == "__main__":
             out / "content_brief.jsonl",
         )
         total = n_kw + n_cb
-        print(f"\n[INFO] Summary: {total}/1800 valid samples collected (KW: {n_kw}, CB: {n_cb})")
-        if total < 1800:
-            print(f"[WARN] Short by {1800 - total} samples. Additional generation required.")
+        TARGET_V2 = 2700
+        print(f"\n[INFO] Summary: {total} valid samples collected (KW: {n_kw}, CB: {n_cb})")
+        if total < TARGET_V2:
+            print(f"[WARN] Short by {TARGET_V2 - total} samples. Additional generation required.")
         else:
-            print(f"[SUCCESS] Target achieved! Exceeded 1800 samples with {total} high-quality samples.")
+            print(f"[SUCCESS] Target v2 achieved! {total} high-quality bilingual samples ready for QLoRA training.")
     elif args.task == "KEYWORD_RESEARCH":
         f_inp = inp if inp.suffix == ".jsonl" else inp / "keyword_research_raw.jsonl"
         f_out = out if out.suffix == ".jsonl" else out / "keyword_research.jsonl"

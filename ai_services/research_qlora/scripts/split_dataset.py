@@ -1,6 +1,7 @@
 """
 Module: split_dataset.py
 Description: Merges cleaned task datasets, shuffles with fixed seed, and splits into 90/10 train/test sets.
+             Supports --v2 flag to output train_v2.jsonl / test_v2.jsonl for QLoRA Model v2.
 """
 
 import argparse
@@ -9,7 +10,7 @@ import random
 from pathlib import Path
 
 
-def split(data_dir: Path, seed: int = 42):
+def split(data_dir: Path, seed: int = 42, v2: bool = False):
     kw_file = data_dir / "keyword_research.jsonl"
     cb_file = data_dir / "content_brief.jsonl"
 
@@ -35,7 +36,8 @@ def split(data_dir: Path, seed: int = 42):
     train = samples[:split_idx]
     test = samples[split_idx:]
 
-    for name, subset in [("train", train), ("test", test)]:
+    suffix = "_v2" if v2 else ""
+    for name, subset in [(f"train{suffix}", train), (f"test{suffix}", test)]:
         out = data_dir / f"{name}.jsonl"
         with out.open("w", encoding="utf-8") as f:
             for s in subset:
@@ -49,5 +51,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Split dataset into train and test sets")
     parser.add_argument("--data-dir", default="../data/", help="Directory containing cleaned JSONL files")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
+    parser.add_argument("--v2", action="store_true", help="Output as train_v2.jsonl / test_v2.jsonl")
     args = parser.parse_args()
-    split(Path(args.data_dir), args.seed)
+    split(Path(args.data_dir), args.seed, args.v2)
