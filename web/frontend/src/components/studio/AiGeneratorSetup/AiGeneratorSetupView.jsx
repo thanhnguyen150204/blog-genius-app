@@ -168,7 +168,7 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
       }
 
       setGeneratingProgress(40);
-      setGeneratingStep("Generating sections with rolling context...");
+      setGeneratingStep("Writing article sections...");
 
 
       const response = await fetch("/api/ai/generate-article", {
@@ -191,7 +191,7 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
       }
 
       setGeneratingProgress(100);
-      setGeneratingStep("Article compiled successfully!");
+      setGeneratingStep("Article generated successfully!");
 
       const generatedPostTitle = title.trim();
       const kwString = Array.isArray(keywords) ? keywords.join(", ") : (keywords || "");

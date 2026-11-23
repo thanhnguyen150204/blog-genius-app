@@ -30,7 +30,7 @@ export function ScratchBuilderView({
       } else if (typeof shopify?.fullscreen === "function") {
         shopify.fullscreen(true);
       }
-    } catch (e) {}
+    } catch (e) { }
 
     return () => {
       try {
@@ -43,7 +43,7 @@ export function ScratchBuilderView({
         } else if (typeof shopify?.fullscreen === "function") {
           shopify.fullscreen(false);
         }
-      } catch (e) {}
+      } catch (e) { }
     };
   }, [shopify]);
 
@@ -435,8 +435,8 @@ export function ScratchBuilderView({
       targetIndex !== null
         ? targetIndex + 1
         : selectedBlockIndex !== null
-        ? selectedBlockIndex + 1
-        : blocks.length;
+          ? selectedBlockIndex + 1
+          : blocks.length;
 
     const updatedBlocks = [
       ...blocks.slice(0, insertAt),
@@ -538,8 +538,9 @@ export function ScratchBuilderView({
     const savedPost = {
       ...initialPost,
       ...postData,
+      blocks,
       mode: "scratch",
-      isAiGenerated: false,
+      isAiGenerated: initialPost?.isAiGenerated ?? true,
       creationMode: "scratch",
       outline: outlineSections.length > 0 ? outlineSections : initialPost?.outline || [],
       bodyHtml: compiledHtml || "<p>This is a sample paragraph</p>",

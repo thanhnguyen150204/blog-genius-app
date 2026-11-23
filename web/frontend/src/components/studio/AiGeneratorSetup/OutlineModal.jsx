@@ -202,10 +202,10 @@ export function OutlineModal({
       try {
         data = JSON.parse(text);
       } catch (e) {
-        throw new Error(text || `Backend server is not running or returned empty response (HTTP ${response.status})`);
+        throw new Error(text || "Unable to connect to the server. Please try again.");
       }
       if (!response.ok || !data.success) {
-        throw new Error(data.message || data.error || "Failed to generate outline from AI engine.");
+        throw new Error(data.message || data.error || "Failed to generate outline. Please try again.");
       }
 
       const outlineArray = data.outline || [];

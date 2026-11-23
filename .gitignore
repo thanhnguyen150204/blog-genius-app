@@ -44,3 +44,6 @@ yarn-error.log*
 
 # Toml files
 shopify.app.*.toml
+
+# Private study notes & learning guides
+docs/
