@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { ProductPickerModal } from "./ProductPickerModal";
 import {
   Text,
   Button,
@@ -264,6 +265,34 @@ export function ElementInspectorSidebar({
   onOpenAiImageModal,
 }) {
   const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
+  const [productPickerMode, setProductPickerMode] = useState("single");
+
+  const handleSelectProductForCard = (product) => {
+    onUpdateBlock({
+      ...block,
+      title: product.title,
+      subtitle: product.description ? product.description.slice(0, 90) + "..." : "High-performance store product",
+      price: product.price,
+      imageUrl: product.imageUrl,
+      productHandle: product.handle,
+      badge: product.inventory > 0 ? "In Stock" : "Out of Stock",
+    });
+  };
+
+  const handleSelectProductsForGrid = (chosenProducts) => {
+    const formatted = chosenProducts.map((p) => ({
+      title: p.title,
+      price: p.price,
+      imageUrl: p.imageUrl,
+      tag: p.handle,
+    }));
+    onUpdateBlock({
+      ...block,
+      products: formatted,
+    });
+  };
+
   const [openSections, setOpenSections] = useState({
     content: true,
     table: true,
@@ -1173,9 +1202,30 @@ export function ElementInspectorSidebar({
               onToggle={() => toggleSection("productSource")}
             >
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <Button fullWidth onClick={() => alert("Select product from Shopify store")}>
-                  Select product
+                <Button
+                  fullWidth
+                  onClick={() => {
+                    setProductPickerMode("single");
+                    setIsProductPickerOpen(true);
+                  }}
+                >
+                  {block.title ? "Change product" : "Select product"}
                 </Button>
+                {block.title && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px", background: "#f8fafc", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                    {block.imageUrl && (
+                      <img src={block.imageUrl} alt={block.title} style={{ width: "40px", height: "40px", borderRadius: "4px", objectFit: "cover" }} />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "12px", fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {block.title}
+                      </div>
+                      <div style={{ fontSize: "11px", color: "#16a34a", fontWeight: "bold" }}>
+                        {block.price}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </CollapsibleCard>
 
@@ -1625,8 +1675,14 @@ export function ElementInspectorSidebar({
                     </div>
                   </label>
 
-                  <Button fullWidth onClick={() => alert("Select products from store")}>
-                    Select products
+                  <Button
+                    fullWidth
+                    onClick={() => {
+                      setProductPickerMode("multi");
+                      setIsProductPickerOpen(true);
+                    }}
+                  >
+                    Select products {block.products?.length > 0 ? `(${block.products.length})` : ""}
                   </Button>
                 </div>
 
@@ -2472,6 +2528,15 @@ export function ElementInspectorSidebar({
             />
           </div>
         </CollapsibleCard>
+
+        {/* Shopify GraphQL Product Picker Modal */}
+        <ProductPickerModal
+          open={isProductPickerOpen}
+          onClose={() => setIsProductPickerOpen(false)}
+          multiSelect={productPickerMode === "multi"}
+          onSelectProduct={handleSelectProductForCard}
+          onSelectProducts={handleSelectProductsForGrid}
+        />
       </div>
     </div>
   );

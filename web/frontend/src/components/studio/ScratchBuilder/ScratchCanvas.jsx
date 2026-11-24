@@ -1852,7 +1852,7 @@ export function ScratchCanvas({
                         justifyContent: "center",
                       }}
                     >
-                      <Button onClick={() => alert("Select product")}>
+                      <Button onClick={() => onSelectBlock && onSelectBlock(block.id)}>
                         Select product
                       </Button>
                     </div>
