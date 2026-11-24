@@ -1,27 +1,15 @@
 import {
   Card,
-  BlockStack,
-  InlineStack,
   TextField,
   Select,
   Button,
-  ButtonGroup,
-  Badge,
-  Box,
-  Divider,
 } from "@shopify/polaris";
 import {
   SearchIcon,
-  TargetIcon,
-  CartIcon,
-  MagicIcon,
-  ChartHistogramGrowthIcon,
   XSmallIcon,
 } from "@shopify/polaris-icons";
 import {
-  CATEGORY_OPTIONS,
   BUYER_INTENT_OPTIONS,
-  FUNNEL_OPTIONS,
   AI_ENGINE_OPTIONS,
   DIFFICULTY_OPTIONS,
 } from "./mockData";
@@ -31,12 +19,8 @@ export function ContentIdeasFilters({
   onTabChange,
   searchQuery,
   onSearchChange,
-  category,
-  onCategoryChange,
   buyerIntent,
   onBuyerIntentChange,
-  funnelStage,
-  onFunnelStageChange,
   aiEngine,
   onAiEngineChange,
   difficulty,
@@ -46,201 +30,133 @@ export function ContentIdeasFilters({
   onResetFilters,
   counts,
 }) {
-  // Thanh 1: Category tabs using standard Polaris segmented buttons (Dark pressed state)
   const tabOptions = [
-    { label: `All Opportunities (${counts.all})`, value: "all" },
-    { label: `Topic Ideas (${counts.topic})`, value: "topic" },
-    { label: `Hot Keywords (${counts.keyword})`, value: "keyword" },
-    { label: `AI Questions (${counts.question})`, value: "question" },
-    { label: `Saved (${counts.saved})`, value: "saved" },
+    { label: "All Opportunities", count: counts.all, value: "all" },
+    { label: "Topic Ideas", count: counts.topic, value: "topic" },
+    { label: "Hot Keywords", count: counts.keyword, value: "keyword" },
+    { label: "AI Questions", count: counts.question, value: "question" },
+    { label: "Bookmarks", count: counts.saved, value: "saved" },
   ];
 
-  // Thanh 2: Presets using Polaris segmented buttons (White bg, colored text/icon when pressed)
-  const presetOptions = [
-    {
-      value: "all",
-      label: "All Presets",
-      activeColor: "#202223",
-    },
-    {
-      value: "quick-wins",
-      label: "Quick Wins (Easy & Fast Rank)",
-      icon: TargetIcon,
-      activeColor: "#007a5c", // Green
-    },
-    {
-      value: "high-intent",
-      label: "High Buyer Intent (Ready to Buy)",
-      icon: CartIcon,
-      activeColor: "#005bd3", // Blue
-    },
-    {
-      value: "ai-magnet",
-      label: "AI Citation Magnet (GEO 90%+)",
-      icon: MagicIcon,
-      activeColor: "#7c3aed", // Magic Purple
-    },
-    {
-      value: "breakouts",
-      label: "Breakout Trends (+100% Growth)",
-      icon: ChartHistogramGrowthIcon,
-      activeColor: "#b24000", // Warm Brown / Amber-Red
-    },
+  const presets = [
+    { id: "quick-wins", label: "⚡ Quick Wins (Easy Rank)" },
+    { id: "high-intent", label: "🎯 Ready to Buy (BOFU)" },
+    { id: "ai-magnet", label: "🤖 90%+ Citation Odds" },
   ];
 
   const hasActiveFilters =
     searchQuery ||
-    category !== "all" ||
     buyerIntent !== "all" ||
-    funnelStage !== "all" ||
     aiEngine !== "all" ||
     difficulty !== "all" ||
-    (activePreset !== null && activePreset !== "all");
+    activePreset !== null;
 
   return (
-    <Box paddingBlockEnd="400">
+    <div className="ideas-filter-panel">
       <Card padding="400">
-        <BlockStack gap="300">
-          {/* Thanh 1: Main Category Tabs with Polaris ButtonGroup segmented */}
-          <div
-            className="content-ideas-category-segmented"
-            style={{ maxWidth: "100%", overflowX: "auto" }}
-          >
-            <ButtonGroup variant="segmented">
+        <div className="filter-panel-inner">
+          {/* Row 1: Category Navigation Tabs & Preset Quick Chips */}
+          <div className="filter-nav-row">
+            {/* Tabs */}
+            <div className="filter-tab-group">
               {tabOptions.map((tab) => {
                 const isSelected = activeTab === tab.value;
                 return (
-                  <Button
+                  <button
                     key={tab.value}
-                    size="medium"
-                    pressed={isSelected}
+                    type="button"
+                    className={`filter-tab-pill ${isSelected ? "active" : ""}`}
                     onClick={() => onTabChange(tab.value)}
                   >
-                    {tab.label}
-                  </Button>
+                    <span>{tab.label}</span>
+                    <span className="tab-count-badge">{tab.count}</span>
+                  </button>
                 );
               })}
-            </ButtonGroup>
+            </div>
+
+            {/* Quick Filter Presets */}
+            <div className="filter-preset-chips">
+              {presets.map((preset) => {
+                const isSelected = activePreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className={`preset-chip ${isSelected ? "active" : ""}`}
+                    onClick={() => onApplyPreset(isSelected ? null : preset.id)}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <Divider />
+          <div className="filter-divider" />
 
-          {/* Thanh 2: Quick Filter Presets with Polaris ButtonGroup segmented */}
-          <InlineStack gap="200" blockAlign="center" wrap>
-            <Badge tone="info" size="small">
-              Presets
-            </Badge>
-            <div
-              className="content-ideas-presets-segmented"
-              style={{ maxWidth: "100%", overflowX: "auto" }}
-            >
-              <ButtonGroup variant="segmented">
-                {presetOptions.map((preset) => {
-                  const isSelected = (activePreset || "all") === preset.value;
-                  return (
-                    <Button
-                      key={preset.value}
-                      size="slim"
-                      icon={preset.icon || undefined}
-                      pressed={isSelected}
-                      onClick={() =>
-                        onApplyPreset(preset.value === "all" ? null : preset.value)
-                      }
-                      style={
-                        isSelected ? { color: preset.activeColor } : undefined
-                      }
-                    >
-                      <span
-                        style={{
-                          color: isSelected ? preset.activeColor : undefined,
-                          fontWeight: isSelected ? 600 : 400,
-                        }}
-                      >
-                        {preset.label}
-                      </span>
-                    </Button>
-                  );
-                })}
-              </ButtonGroup>
-            </div>
-            {hasActiveFilters && (
-              <Button
-                size="slim"
-                variant="secondary"
-                tone="critical"
-                icon={XSmallIcon}
-                onClick={onResetFilters}
-              >
-                Clear all filters
-              </Button>
-            )}
-          </InlineStack>
-
-          <Divider />
-
-          {/* Search and Detailed Select Filters */}
-          <InlineStack gap="300" wrap blockAlign="end">
-            <Box minWidth="260px">
+          {/* Row 2: Search & Balanced Controls (1 single cohesive row, 0 awkward holes) */}
+          <div className="filter-controls-row">
+            <div className="search-field-wrap">
               <TextField
                 label="Search idea or query"
+                labelHidden
                 value={searchQuery}
                 onChange={onSearchChange}
-                placeholder="e.g. linen, baby, skincare, coat..."
+                placeholder="Search topics, queries, or matched products..."
                 prefix={<SearchIcon />}
                 clearButton
                 onClearButtonClick={() => onSearchChange("")}
                 autoComplete="off"
               />
-            </Box>
+            </div>
 
-            <Box minWidth="150px">
-              <Select
-                label="Category / Niche"
-                options={CATEGORY_OPTIONS}
-                value={category}
-                onChange={onCategoryChange}
-              />
-            </Box>
-
-            <Box minWidth="170px">
+            <div className="filter-select-wrap">
               <Select
                 label="Buyer Intent"
+                labelHidden
                 options={BUYER_INTENT_OPTIONS}
                 value={buyerIntent}
                 onChange={onBuyerIntentChange}
               />
-            </Box>
+            </div>
 
-            <Box minWidth="160px">
-              <Select
-                label="Funnel Stage"
-                options={FUNNEL_OPTIONS}
-                value={funnelStage}
-                onChange={onFunnelStageChange}
-              />
-            </Box>
-
-            <Box minWidth="150px">
-              <Select
-                label="AI Source"
-                options={AI_ENGINE_OPTIONS}
-                value={aiEngine}
-                onChange={onAiEngineChange}
-              />
-            </Box>
-
-            <Box minWidth="140px">
+            <div className="filter-select-wrap">
               <Select
                 label="SEO Difficulty"
+                labelHidden
                 options={DIFFICULTY_OPTIONS}
                 value={difficulty}
                 onChange={onDifficultyChange}
               />
-            </Box>
-          </InlineStack>
-        </BlockStack>
+            </div>
+
+            <div className="filter-select-wrap">
+              <Select
+                label="AI Source"
+                labelHidden
+                options={AI_ENGINE_OPTIONS}
+                value={aiEngine}
+                onChange={onAiEngineChange}
+              />
+            </div>
+
+            {hasActiveFilters && (
+              <div className="filter-clear-wrap">
+                <Button
+                  variant="plain"
+                  tone="critical"
+                  icon={XSmallIcon}
+                  onClick={onResetFilters}
+                >
+                  Clear
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
       </Card>
-    </Box>
+    </div>
   );
 }
 

@@ -39,7 +39,7 @@ export function ScratchSidebarElements({ onInsertBlock, onSelectTool }) {
   return (
     <div
       style={{
-        width: "330px",
+        width: "360px",
         backgroundColor: "#ffffff",
         borderRight: "1px solid #e4e4e7",
         overflowY: "auto",

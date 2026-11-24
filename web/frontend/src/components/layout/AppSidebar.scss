@@ -1,0 +1,554 @@
+// ==========================================================================
+// BlogGenius Workspace Shell — Precision Desktop Nav (Linear / Vercel Grade)
+// ==========================================================================
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; // Lock viewport scroll
+}
+
+.bg-app-shell {
+  display: flex;
+  height: 100vh;
+  max-height: 100vh;
+  width: 100%;
+  background-color: #f8fafc;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #0f172a;
+  overflow: hidden; // Shell never scrolls
+}
+
+// --------------------------------------------------------------------------
+// Sidebar Container (Comfortable 260px desktop width - FIXED IN PLACE)
+// --------------------------------------------------------------------------
+.bg-sidebar {
+  width: 260px;
+  min-width: 260px;
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  z-index: 90;
+  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              min-width 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.is-collapsed {
+    width: 64px;
+    min-width: 64px;
+
+    .sidebar-top {
+      padding: 16px 10px;
+      align-items: center;
+    }
+
+    .brand-header {
+      justify-content: center;
+      padding: 0;
+    }
+
+    .nav-group-header {
+      display: none;
+    }
+
+    .nav-group-divider {
+      height: 1px;
+      background: #f1f5f9;
+      margin: 10px 12px;
+    }
+
+    .nav-link {
+      justify-content: center;
+      padding: 0;
+      margin: 3px 10px;
+      height: 38px;
+
+      .nav-icon {
+        margin: 0;
+      }
+    }
+
+    .sidebar-footer {
+      padding: 12px 10px;
+    }
+
+    .footer-actions {
+      justify-content: center;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------
+// Sidebar Top: Brand & Workspace Switcher
+// --------------------------------------------------------------------------
+.sidebar-top {
+  padding: 16px 14px 14px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  padding: 2px;
+
+  .brand-monogram {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+
+    .brand-char {
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      font-family: inherit;
+    }
+
+    .brand-dot {
+      width: 4.5px;
+      height: 4.5px;
+      background: #6366f1;
+      border-radius: 50%;
+      position: absolute;
+      top: 4px;
+      right: 4px;
+    }
+  }
+
+  .brand-title-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .brand-title {
+    font-size: 15px;
+    font-weight: 650;
+    color: #0f172a;
+    letter-spacing: -0.025em;
+  }
+
+  .brand-version {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: #94a3b8;
+    background: #f1f5f9;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+}
+
+// Workspace / Store Switcher
+.store-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+
+  .store-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    background: #0f172a;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .store-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+
+  .store-name-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .store-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 3.5px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #059669;
+
+    .live-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+  }
+
+  .store-domain {
+    font-size: 11px;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: -0.01em;
+  }
+
+  .store-caret {
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+}
+
+// --------------------------------------------------------------------------
+// Navigation Groups & Links (Scaled to 38px comfortable height)
+// --------------------------------------------------------------------------
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 0;
+
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 2px;
+  }
+}
+
+.nav-group {
+  margin-bottom: 14px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.nav-group-header {
+  padding: 4px 18px 5px 18px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nav-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 12px;
+  margin: 1px 10px;
+  height: 37px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  font-weight: 480;
+  color: #475569;
+  text-decoration: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  position: relative;
+
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    flex-shrink: 0;
+    transition: color 0.12s ease;
+
+    svg {
+      width: 17px;
+      height: 17px;
+    }
+  }
+
+  .nav-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.01em;
+  }
+
+  // Micro Badges
+  .nav-badge-radar {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 1.5px 6px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    text-transform: uppercase;
+  }
+
+  .nav-badge-pro {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 1.5px 6px;
+    border-radius: 4px;
+    background: #0f172a;
+    color: #ffffff;
+    text-transform: uppercase;
+  }
+
+  &:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+
+    .nav-icon {
+      color: #0f172a;
+    }
+  }
+
+  // Active State: Crisp, Focused Solid Dark Slate (Vercel / Linear Standard)
+  &.active {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-weight: 550;
+
+    .nav-icon {
+      color: #ffffff;
+    }
+
+    .nav-badge-radar {
+      background: rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.24);
+    }
+
+    .nav-badge-pro {
+      background: #ffffff;
+      color: #0f172a;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------
+// Sidebar Footer: Functional Usage Meter & Account Bar
+// --------------------------------------------------------------------------
+.sidebar-footer {
+  padding: 12px 12px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background-color: #ffffff;
+  flex-shrink: 0;
+}
+
+.usage-meter {
+  padding: 9px 12px;
+  border-radius: 7px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+
+  .usage-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+
+    .usage-label {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #64748b;
+    }
+
+    .usage-stat {
+      font-size: 11.5px;
+      color: #475569;
+      font-variant-numeric: tabular-nums;
+
+      strong {
+        color: #0f172a;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .usage-track {
+    width: 100%;
+    height: 4px;
+    background-color: #e2e8f0;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 7px;
+
+    .usage-bar {
+      height: 100%;
+      background-color: #0f172a;
+      border-radius: 99px;
+      transition: width 0.25s ease;
+    }
+  }
+
+  .usage-sub {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: #64748b;
+
+    .usage-link {
+      font-weight: 500;
+      color: #0f172a;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+// Account row & collapse trigger
+.footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px;
+}
+
+.account-preview {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  overflow: hidden;
+
+  .account-avatar {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 10.5px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .account-meta {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    line-height: 1.2;
+  }
+
+  .account-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .account-role {
+    font-size: 10.5px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    border-color: #e2e8f0;
+  }
+}
+
+// --------------------------------------------------------------------------
+// Main Content Area Shell (Dedicated scrolling viewport)
+// --------------------------------------------------------------------------
+.bg-main-content {
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+
+  .Polaris-Page {
+    padding-top: 24px;
+    padding-bottom: 56px;
+  }
+}

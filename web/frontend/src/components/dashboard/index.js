@@ -4,6 +4,8 @@ export { CreditsBar } from "./CreditsBar";
 export { RatingFeedbackCard } from "./RatingFeedbackCard";
 export { DashboardHeader } from "./DashboardHeader";
 export { MetricScorecards } from "./MetricScorecards";
+export { AiPerformanceAnalyticsCard } from "./AiPerformanceAnalyticsCard";
+export { DashboardSkeleton } from "./DashboardSkeleton";
 export { ContentByIntentCard } from "./ContentByIntentCard";
 export { RecentPostsCard } from "./RecentPostsCard";
 export { GeoTechnicalHealthCard } from "./GeoTechnicalHealthCard";
