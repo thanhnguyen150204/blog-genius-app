@@ -5,7 +5,7 @@ export function ScratchSidebarOutline({ blocks = [], onMoveUp, onMoveDown, onDel
   return (
     <div
       style={{
-        width: "350px",
+        width: "360px",
         backgroundColor: "#ffffff",
         borderRight: "1px solid #e4e4e7",
         overflowY: "auto",

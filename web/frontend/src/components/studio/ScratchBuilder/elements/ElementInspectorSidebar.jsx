@@ -338,7 +338,7 @@ export function ElementInspectorSidebar({
   return (
     <div
       style={{
-        width: "320px",
+        width: "360px",
         backgroundColor: "#ffffff",
         borderRight: "1px solid #e4e4e7",
         height: "calc(100vh - 56px)",

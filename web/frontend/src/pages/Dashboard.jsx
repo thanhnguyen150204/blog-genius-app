@@ -6,6 +6,8 @@ import {
   RatingFeedbackCard,
   DashboardHeader,
   MetricScorecards,
+  AiPerformanceAnalyticsCard,
+  DashboardSkeleton,
   TrendingIdeasCard,
   GeoTechnicalHealthCard,
   CreatePostCallout,
@@ -17,7 +19,16 @@ import {
 
 export default function Dashboard() {
   const shopify = useAppBridge();
+  const [isLoading, setIsLoading] = useState(true);
   const [geoHealthScore, setGeoHealthScore] = useState(60);
+
+  useEffect(() => {
+    // Initial data hydration simulation / network load
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, []);
   const [calendarStatus, setCalendarStatus] = useState("All");
   const [calendarView, setCalendarView] = useState("Month");
   const [showRatingBanner, setShowRatingBanner] = useState(true);
@@ -134,6 +145,10 @@ export default function Dashboard() {
 
   const isPostVisible = calendarStatus === "All" || calendarStatus === "Published";
 
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <Page>
       <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%", paddingBottom: "32px" }}>
@@ -149,6 +164,8 @@ export default function Dashboard() {
             onOpenAiCitations={() => setShowAiCitationsModal(true)}
             onOpenFreshness={() => setShowFreshnessModal(true)}
           />
+
+          <AiPerformanceAnalyticsCard />
 
           <div className="dashboard-layout-row">
             <Layout>

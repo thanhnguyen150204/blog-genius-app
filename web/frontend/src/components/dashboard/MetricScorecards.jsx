@@ -1,4 +1,4 @@
-import { Grid, Card, BlockStack, Text, Badge, Icon } from "@shopify/polaris";
+import { Text, Icon } from "@shopify/polaris";
 import { useNavigate } from "react-router-dom";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { ArrowDiagonalIcon } from "@shopify/polaris-icons";
@@ -23,121 +23,97 @@ export function MetricScorecards({
   };
 
   return (
-    <Grid>
-      <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 3 }}>
-        <div
-          role="button"
-          tabIndex={0}
-          className="polaris-metric-card"
-          onClick={onOpenAiCitations}
-          onKeyDown={handleKeyDown(onOpenAiCitations)}
-        >
-          <Card>
-            <BlockStack gap="150">
-              <Text variant="bodySm" tone="subdued">
-                AI citations (30 days)
-              </Text>
-              <Text variant="heading2xl" as="p">
-                0
-              </Text>
-              <div style={{ minHeight: "24px", display: "flex", alignItems: "center" }}>
-                <Text variant="bodyXs" tone="subdued">
-                  Click to view AI breakdown
-                </Text>
-                <Icon source={ArrowDiagonalIcon} tone="subdued"/>
-              </div>
-            </BlockStack>
-          </Card>
+    <div className="executive-kpi-cards">
+      {/* Card 1: AI Citations */}
+      <div
+        role="button"
+        tabIndex={0}
+        className="kpi-card"
+        onClick={onOpenAiCitations}
+        onKeyDown={handleKeyDown(onOpenAiCitations)}
+        title="Click to view AI engine citation breakdown"
+      >
+        <div className="kpi-card-top">
+          <span className="kpi-num">48</span>
+          <span className="kpi-pill kpi-pill-success">+34.2%</span>
         </div>
-      </Grid.Cell>
+        <div className="kpi-card-mid">
+          <span className="kpi-label">AI Citations (30d)</span>
+          <Icon source={ArrowDiagonalIcon} tone="subdued" />
+        </div>
+        <div className="kpi-card-sub">Perplexity, SearchGPT, Gemini</div>
+      </div>
 
-      <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 3 }}>
-        <div
-          role="button"
-          tabIndex={0}
-          className="polaris-metric-card"
-          onClick={() => navigate("/studio")}
-          onKeyDown={handleKeyDown(() => navigate("/studio"))}
-        >
-          <Card>
-            <BlockStack gap="150">
-              <Text variant="bodySm" tone="subdued">
-                Published posts
-              </Text>
-              <Text variant="heading2xl" as="p">
-                {publishedCount} / {totalPosts}
-              </Text>
-              <div style={{ minHeight: "24px", display: "flex", alignItems: "center" }}>
-                <Text variant="bodyXs" tone="subdued">
-                  {scheduledCount} posts scheduled
-                </Text>
-              </div>
-            </BlockStack>
-          </Card>
+      {/* Card 2: GEO Health Readiness */}
+      <div
+        role="button"
+        tabIndex={0}
+        className="kpi-card"
+        onClick={() => {
+          shopify.toast?.show("GEO Health Score: 3 content factors need optimization for AI crawlers.");
+        }}
+        onKeyDown={handleKeyDown(() => {
+          shopify.toast?.show("GEO Health Score: 3 content factors need optimization for AI crawlers.");
+        })}
+        title="Click to inspect GEO technical factors"
+      >
+        <div className="kpi-card-top">
+          <span className={`kpi-num ${geoHealthScore >= 80 ? "tone-green" : "tone-amber"}`}>
+            {geoHealthScore}%
+          </span>
+          <span className={`kpi-pill ${geoHealthScore >= 80 ? "kpi-pill-success" : "kpi-pill-warning"}`}>
+            {geoHealthScore >= 80 ? "Optimal" : "3 to fix"}
+          </span>
         </div>
-      </Grid.Cell>
+        <div className="kpi-card-mid">
+          <span className="kpi-label">GEO Health Score</span>
+          <Icon source={ArrowDiagonalIcon} tone="subdued" />
+        </div>
+        <div className="kpi-card-sub">FAQ Schema & Summary blocks</div>
+      </div>
 
-      <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 3 }}>
-        <div
-          role="button"
-          tabIndex={0}
-          className="polaris-metric-card"
-          onClick={() => {
-            shopify.toast?.show("GEO Health Score reflects citation readiness by DeepSeek & Qwen.");
-          }}
-          onKeyDown={handleKeyDown(() => {
-            shopify.toast?.show("GEO Health Score reflects citation readiness by DeepSeek & Qwen.");
-          })}
-        >
-          <Card>
-            <BlockStack gap="150">
-              <Text variant="bodySm" tone="subdued">
-                GEO health score
-              </Text>
-              <Text
-                variant="heading2xl"
-                as="p"
-                tone={geoHealthScore >= 80 ? "success" : "caution"}
-              >
-                {geoHealthScore}%
-              </Text>
-              <div style={{ minHeight: "24px", display: "flex", alignItems: "center" }}>
-                <Badge tone={geoHealthScore >= 80 ? "success" : "warning"}>
-                  {geoHealthScore >= 80 ? "Optimal health" : "Needs attention"}
-                </Badge>
-              </div>
-            </BlockStack>
-          </Card>
+      {/* Card 3: Published & Cadence */}
+      <div
+        role="button"
+        tabIndex={0}
+        className="kpi-card"
+        onClick={() => navigate("/studio")}
+        onKeyDown={handleKeyDown(() => navigate("/studio"))}
+        title="Click to open Content Studio"
+      >
+        <div className="kpi-card-top">
+          <span className="kpi-num">{publishedCount} / {totalPosts}</span>
+          <span className="kpi-pill kpi-pill-neutral">Active</span>
         </div>
-      </Grid.Cell>
+        <div className="kpi-card-mid">
+          <span className="kpi-label">Published Posts</span>
+          <Icon source={ArrowDiagonalIcon} tone="subdued" />
+        </div>
+        <div className="kpi-card-sub">
+          {scheduledCount > 0 ? `${scheduledCount} scheduled` : "Cadence on track"}
+        </div>
+      </div>
 
-      <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 3 }}>
-        <div
-          role="button"
-          tabIndex={0}
-          className="polaris-metric-card"
-          onClick={onOpenFreshness}
-          onKeyDown={handleKeyDown(onOpenFreshness)}
-        >
-          <Card>
-            <BlockStack gap="150">
-              <Text variant="bodySm" tone="subdued">
-                Posts needing refresh
-              </Text>
-              <Text variant="heading2xl" as="p">
-                {postsNeedingRefresh}
-              </Text>
-              <div style={{ minHeight: "24px", display: "flex", alignItems: "center" }}>
-                <Text variant="bodyXs" tone="subdued">
-                  All posts up to date
-                </Text>
-                <Icon source={ArrowDiagonalIcon} tone="subdued" />
-              </div>
-            </BlockStack>
-          </Card>
+      {/* Card 4: Content Freshness */}
+      <div
+        role="button"
+        tabIndex={0}
+        className="kpi-card"
+        onClick={onOpenFreshness}
+        onKeyDown={handleKeyDown(onOpenFreshness)}
+        title="Click to check post freshness"
+      >
+        <div className="kpi-card-top">
+          <span className="kpi-num tone-green">100%</span>
+          <span className="kpi-pill kpi-pill-success">Fresh</span>
         </div>
-      </Grid.Cell>
-    </Grid>
+        <div className="kpi-card-mid">
+          <span className="kpi-label">Content Freshness</span>
+          <Icon source={ArrowDiagonalIcon} tone="subdued" />
+        </div>
+        <div className="kpi-card-sub">0 posts overdue for refresh</div>
+      </div>
+    </div>
   );
 }
 

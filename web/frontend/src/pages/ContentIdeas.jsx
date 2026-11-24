@@ -15,8 +15,7 @@ import {
   DEFAULT_RADAR_SETTINGS,
   AI_TELEMETRY_STATS,
 } from "../components/content-ideas";
-import { SettingsIcon } from "@shopify/polaris-icons";
-import { Icon } from "@shopify/polaris";
+
 
 export default function ContentIdeas() {
   const shopify = useAppBridge();
@@ -218,18 +217,25 @@ export default function ContentIdeas() {
   };
 
   return (
-    <div className="content-ideas-page">
-      <Page fullWidth>
-        <BlockStack gap="400">
+    <Page>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%", paddingBottom: "32px" }}>
+        <BlockStack gap="500">
           {/* Header */}
           <ContentIdeasHeader
             onOpenValidator={() => setIsValidatorModalOpen(true)}
             onStartLiveScan={handleStartLiveScan}
             isScanning={isLiveScanModalOpen}
+            onOpenSettings={() => setIsSettingsDrawerOpen(true)}
           />
 
-          {/* Overview Scorecards */}
-          <ContentIdeasOverviewStats stats={stats} />
+          {/* Overview Scorecards & Visual Intent Distribution */}
+          <ContentIdeasOverviewStats
+            ideas={ideas}
+            onFilterByIntent={(intent) => {
+              setBuyerIntent(intent);
+              setActivePreset(null);
+            }}
+          />
 
           {/* Detailed Filters & Presets */}
           <ContentIdeasFilters
@@ -237,12 +243,8 @@ export default function ContentIdeas() {
             onTabChange={setActiveTab}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            category={category}
-            onCategoryChange={setCategory}
             buyerIntent={buyerIntent}
             onBuyerIntentChange={setBuyerIntent}
-            funnelStage={funnelStage}
-            onFunnelStageChange={setFunnelStage}
             aiEngine={aiEngine}
             onAiEngineChange={setAiEngine}
             difficulty={difficulty}
@@ -296,26 +298,8 @@ export default function ContentIdeas() {
           onApplyNewIdeas={handleApplyNewIdeas}
         />
 
-        {/* Floating Right Tab Trigger */}
-        <div
-          className="content-ideas-floating-tab-trigger"
-          onClick={() => setIsSettingsDrawerOpen(true)}
-          role="button"
-          tabIndex={0}
-          title="Open Radar Settings & AI Usage"
-          aria-label="Open Radar Settings & AI Usage"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              setIsSettingsDrawerOpen(true);
-            }
-          }}
-        >
-          <div className="tab-icon-wrap">
-            <Icon source={SettingsIcon} tone="base" />
-          </div>
-          <span className="tab-text">Radar & AI Settings</span>
-        </div>
-      </Page>
-    </div>
+
+      </div>
+    </Page>
   );
 }
