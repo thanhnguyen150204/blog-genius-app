@@ -6,7 +6,14 @@ const host = process.env.HOST
   : "localhost";
 
 let hmrConfig;
-if (host === "localhost") {
+if (process.env.HOST && process.env.HOST !== "localhost") {
+  hmrConfig = {
+    protocol: "wss",
+    host: host,
+    port: parseInt(process.env.FRONTEND_PORT) || 8002,
+    clientPort: 443,
+  };
+} else if (process.env.FRONTEND_PORT) {
   hmrConfig = {
     protocol: "ws",
     host: "localhost",
@@ -14,12 +21,7 @@ if (host === "localhost") {
     clientPort: 64999,
   };
 } else {
-  hmrConfig = {
-    protocol: "wss",
-    host: host,
-    port: parseInt(process.env.FRONTEND_PORT) || 8002,
-    clientPort: 443,
-  };
+  hmrConfig = undefined;
 }
 
 export default defineConfig({

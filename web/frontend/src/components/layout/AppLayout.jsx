@@ -13,7 +13,13 @@ export function isEmbeddedInShopify() {
   const searchParams = new URLSearchParams(window.location.search);
   // Manual override parameters for testing & development
   if (searchParams.get("standalone") === "true") return false;
-  if (searchParams.get("embedded") === "1" || searchParams.get("host")) return true;
+  if (
+    searchParams.get("embedded") === "1" ||
+    searchParams.get("host") ||
+    searchParams.get("shop")
+  ) {
+    return true;
+  }
 
   try {
     return window.top !== window.self;

@@ -2,6 +2,7 @@
   "name": "blog-genius",
   "private": true,
   "scripts": {
+    "postinstall": "cd web/backend && yarn install && cd ../frontend && yarn install",
     "dev": "shopify app dev",
     "dev-local": "shopify app dev --config shopify.app.blog-app.toml",
     "build": "cd web/frontend && yarn build",
