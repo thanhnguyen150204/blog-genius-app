@@ -1,0 +1,302 @@
+/* shadcn/ui Inspired Authentication Design Tokens */
+.shadcn-auth-container {
+    min-height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fafafa;
+    background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+    background-size: 24px 24px;
+    padding: 24px 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+
+    .auth-card {
+        width: 100%;
+        max-width: 420px;
+        background: #ffffff;
+        border: 1px solid #e4e4e7;
+        border-radius: 14px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        padding: 32px 28px;
+        box-sizing: border-box;
+        animation: authFadeIn 0.25s ease-out;
+
+        .auth-card-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 24px;
+            gap: 8px;
+
+            .brand-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: #09090b;
+                color: #ffffff;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 4px 12px;
+                border-radius: 9999px;
+                margin-bottom: 4px;
+            }
+
+            h1 {
+                font-size: 24px;
+                font-weight: 700;
+                color: #09090b;
+                margin: 0;
+                letter-spacing: -0.5px;
+                line-height: 1.25;
+            }
+
+            p {
+                font-size: 13px;
+                color: #71717a;
+                margin: 0;
+                line-height: 1.5;
+                max-width: 320px;
+            }
+        }
+
+        /* Segmented Tab Switcher (shadcn Tabs) */
+        .auth-tabs {
+            display: flex;
+            background: #f4f4f5;
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+
+            .tab-btn {
+                flex: 1;
+                padding: 8px 12px;
+                font-size: 13px;
+                font-weight: 600;
+                color: #71717a;
+                border: none;
+                background: transparent;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.15s ease;
+
+                &.active {
+                    background: #ffffff;
+                    color: #09090b;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+            }
+        }
+
+        /* Input Fields */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 16px;
+
+            label {
+                font-size: 13px;
+                font-weight: 600;
+                color: #18181b;
+            }
+
+            input {
+                width: 100%;
+                height: 40px;
+                padding: 0 12px;
+                font-size: 14px;
+                border: 1px solid #e4e4e7;
+                border-radius: 8px;
+                background: #ffffff;
+                color: #09090b;
+                outline: none;
+                transition: border-color 0.15s ease, box-shadow 0.15s ease;
+                box-sizing: border-box;
+
+                &:focus {
+                    border-color: #09090b;
+                    box-shadow: 0 0 0 2px rgba(9, 9, 11, 0.1);
+                }
+
+                &::placeholder {
+                    color: #a1a1aa;
+                }
+            }
+
+            /* Password input wrapper with eye toggle */
+            .password-input-wrapper {
+                position: relative;
+                display: flex;
+                align-items: center;
+                width: 100%;
+
+                input {
+                    padding-right: 40px !important;
+                }
+
+                .btn-toggle-password {
+                    position: absolute;
+                    right: 8px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: transparent;
+                    border: none;
+                    padding: 6px;
+                    cursor: pointer;
+                    color: #71717a;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 4px;
+                    transition: color 0.15s ease;
+
+                    &:hover {
+                        color: #09090b;
+                    }
+
+                    &:focus {
+                        outline: none;
+                    }
+                }
+            }
+        }
+
+        /* Prevent Chrome Autofill blue background */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+            -webkit-text-fill-color: #09090b !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        /* Primary Button (shadcn Button) */
+        .btn-submit {
+            width: 100%;
+            height: 40px;
+            background: #09090b;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background-color 0.15s ease;
+            margin-top: 8px;
+
+            &:hover:not(:disabled) {
+                background: #27272a;
+            }
+
+            &:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+        }
+
+        /* Error Message Alert */
+        .error-alert {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 6-Digit Segmented OTP Input (shadcn InputOTP) */
+        .otp-wrapper {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin: 20px 0;
+
+            .otp-box {
+                width: 48px;
+                height: 54px;
+                text-align: center;
+                font-size: 22px;
+                font-weight: 700;
+                font-family: monospace;
+                border: 1px solid #d4d4d8;
+                border-radius: 8px;
+                background: #ffffff;
+                color: #09090b;
+                outline: none;
+                transition: all 0.15s ease;
+
+                &:focus {
+                    border-color: #09090b;
+                    box-shadow: 0 0 0 3px rgba(9, 9, 11, 0.15);
+                    transform: translateY(-1px);
+                }
+            }
+        }
+
+        .otp-resend-area {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 13px;
+            color: #71717a;
+
+            button {
+                background: transparent;
+                border: none;
+                color: #2563eb;
+                font-weight: 600;
+                cursor: pointer;
+                padding: 0;
+
+                &:hover {
+                    text-decoration: underline;
+                }
+
+                &:disabled {
+                    color: #a1a1aa;
+                    cursor: not-allowed;
+                    text-decoration: none;
+                }
+            }
+        }
+
+        .btn-back-link {
+            background: transparent;
+            border: none;
+            color: #71717a;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 16px;
+            padding: 0;
+
+            &:hover {
+                color: #09090b;
+            }
+        }
+    }
+}
+
+@keyframes authFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

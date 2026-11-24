@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import AppSidebar from "./AppSidebar";
 import NavigationMenuShopify from "../../NavigationMenuShopify";
 import "./AppSidebar.scss";
-
+import { useLocation, Navigate } from "react-router-dom";
 /**
  * Detects whether the application is running embedded inside Shopify Admin iframe
  * or as a standalone web application.
@@ -24,6 +24,7 @@ export function isEmbeddedInShopify() {
 }
 
 export default function AppLayout({ children }) {
+  const location = useLocation();
   const [isEmbedded, setIsEmbedded] = useState(() => isEmbeddedInShopify());
   const [isCollapsed, setIsCollapsed] = useState(() => {
     // Remember user collapse preference from localStorage
@@ -46,6 +47,10 @@ export default function AppLayout({ children }) {
     });
   };
 
+  if (location.pathname === "/login") {
+    return children;
+  }
+
   // When embedded inside Shopify Admin iframe:
   // Render Shopify App Bridge navigation menu and Polaris page directly.
   if (isEmbedded) {
@@ -56,7 +61,10 @@ export default function AppLayout({ children }) {
       </>
     );
   }
-
+  const isAuthenticated = Boolean(localStorage.getItem("bg_auth_token"));
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
   // When running standalone outside Shopify:
   // Render full web layout with modern left sidebar.
   return (

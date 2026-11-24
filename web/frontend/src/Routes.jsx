@@ -9,6 +9,7 @@ import Authors from "./pages/Authors";
 import Research from "./pages/Research";
 import Strategy from "./pages/Strategy";
 import ContentIdeas from "./pages/ContentIdeas";
+import Auth from "./pages/Auth";
 
 export default function AppRoutes() {
   return (
@@ -23,6 +24,7 @@ export default function AppRoutes() {
       <Route path="/authors" element={<Authors />} />
       <Route path="/research" element={<Research />} />
       <Route path="/strategy" element={<Strategy />} />
+      <Route path="/login" element={<Auth />} />
     </Routes>
   );
 }

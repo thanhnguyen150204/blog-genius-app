@@ -266,7 +266,30 @@ export default function AppSidebar({ isCollapsed, onToggleCollapse }) {
               </div>
             </div>
           )}
-
+          {!isCollapsed && (
+            <button
+              type="button"
+              style={{
+                background: "transparent",
+                border: "1px solid #e4e4e7",
+                borderRadius: "6px",
+                padding: "4px 8px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#ef4444",
+                cursor: "pointer",
+                marginRight: "6px",
+              }}
+              onClick={() => {
+                localStorage.removeItem("bg_auth_token");
+                localStorage.removeItem("bg_user");
+                window.location.href = "/login";
+              }}
+              title="Sign out"
+            >
+              Log out
+            </button>
+          )}
           <button
             type="button"
             className="collapse-btn"

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -22,10 +23,12 @@ connectDB();
 import blogRoutes from "./route/blog.route.js";
 import shopRoutes from "./route/shop.route.js";
 import aiRoutes from "./route/ai.route.js";
-
+import authRoutes from "./route/auth.route.js";
 app.use("/api/blogs", blogRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/auth", authRoutes);
+
 
 app.get("/", (req, res) => {
   res.json({ message: "Blog Genius API is running!" });
