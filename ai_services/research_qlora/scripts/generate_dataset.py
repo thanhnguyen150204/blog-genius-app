@@ -1,13 +1,17 @@
 """
-Module: generate_dataset.py (v2 — Clean, Zero-Mismatch, Task1->Task2 Pipeline)
-Description: Generates high-purity bilingual (50% EN / 50% VI) ChatML dataset for:
-  - Task 1: KEYWORD_RESEARCH (diverse topics, strict intent rules, balanced 4 intents)
-  - Task 2: CONTENT_BRIEF (draws unique primary keywords & true intents directly from Task 1)
-Features:
-  - Matched NICHE_PROFILES (100% alignment between Niche/Topic, Business Desc, and Target Customer)
-  - Teacher-to-Student prompt distillation (detailed generation rules for Gemini; concise identical prompt for Qwen2.5-1.5B)
-  - Real-time quality gate (blocks English bleed in VI, invalid enums, and Intent<->Funnel contradictions)
-  - Dual-key round-robin rotation + crash-resilient auto-resume
+Module: generate_dataset.py (v2.1 — Complete 100% UI-Coverage Dataset Generator)
+Description: Generates 2,400 clean bilingual (50% EN / 50% VI) ChatML samples covering
+             EVERY real-world UI scenario on Shopify BlogGenius (Module 1):
+  - Task 1 (KEYWORD_RESEARCH, 1200 samples = 600 EN + 600 VI):
+      * 75% single topic / 25% multi-topic (2-3 related topics joined by ", ")
+      * 4 context combinations: 35% none | 35% biz+cust | 15% biz only | 15% cust only
+      * Balanced 4 intents per response (Transactional, Commercial, Informational, Navigational)
+  - Task 2 (CONTENT_BRIEF, 1200 samples = 600 EN + 600 VI, linked directly from Task 1):
+      * 45% single keyword WITH true Known intent (must preserve dominant_intent)
+      * 40% multi-keyword Bulk Selection (2-5 keywords w/ intents -> pick best primary + include ALL others in secondary)
+      * 15% single free keyword WITHOUT Known intent (model infers dominant_intent)
+      * 80% with Niche / 20% without Niche (user cleared Topics)
+      * 4 context combinations: 35% none | 35% biz+cust | 15% biz only | 15% cust only
 """
 
 import argparse
@@ -29,7 +33,6 @@ except ImportError:
 TARGET_PER_TASK = 1200   # 1200 KW + 1200 CB = 2400 clean bilingual samples
 EN_RATIO = 0.50          # 600 EN per task
 VI_RATIO = 0.50          # 600 VI per task
-MISSING_CONTEXT_PROB = 0.50  # 50% without biz context (matches real UI usage)
 
 INTENT_ENUM = ["Informational", "Commercial", "Transactional", "Navigational"]
 FUNNEL_ENUM = ["TOFU", "MOFU", "BOFU"]
@@ -64,7 +67,7 @@ Rules:
 - Language of keywords must strictly match the Language parameter."""
 
 SYSTEM_CB = """You are an expert SEO & GEO content strategist for Shopify e-commerce blogs.
-Given a primary keyword and optional context, return ONLY a JSON object (no markdown, no explanation) in this exact schema:
+Given a primary keyword (or a list of selected keywords) and optional context, return ONLY a JSON object (no markdown, no explanation) in this exact schema:
 {
   "primary_keyword": "<string>",
   "secondary_keywords": ["<string>", ...],
@@ -83,11 +86,11 @@ Given a primary keyword and optional context, return ONLY a JSON object (no mark
   "suggested_cta": "<string>"
 }
 Rules:
-- secondary_keywords: 2-4 semantically related keywords.
+- If Selected keywords are provided: pick the broadest, highest-value topic as primary_keyword, put ALL remaining selected keywords into secondary_keywords (optionally add 1 more if needed so there are 2-5 items), and synthesize a unified dominant_intent and strategy covering every selected keyword.
+- If a single Primary keyword is provided: keep it as primary_keyword, generate 2-4 semantically related secondary_keywords, and if Known intent is provided, dominant_intent must match it.
 - key_talking_points: 3-5 items, each containing an E-E-A-T signal (stat, study, certification, or expert benchmark).
 - faq_questions: 2-4 conversational AI-search questions.
 - Intent-to-Funnel alignment: Informational->TOFU, Commercial->MOFU, Transactional->BOFU, Navigational->MOFU or BOFU.
-- If Known intent is provided, dominant_intent must match it.
 - All enum fields must use exactly one listed value.
 - Language of all text fields must strictly match the Language parameter with accurate spelling and diacritics."""
 
@@ -99,12 +102,12 @@ TEACHER_KW_EXTRA = """
 ADDITIONAL GENERATION INSTRUCTIONS (Teacher Guidance):
 - Produce exactly 7-8 keyword objects per response.
 - Distribution per response MUST include:
-  * 2 Transactional keywords (must clearly contain buy/order/price/deal or mua/giá/đặt mua/báo giá/khuyến mãi)
-  * 2 Commercial keywords (must be review/compare/top/best/product+audience, e.g. "bàn phím cơ cho lập trình viên", "best ergonomic chair under 500")
-  * 2 Informational keywords (must be how-to/what-is/guide/tips/cách/hướng dẫn/là gì/kinh nghiệm sử dụng)
-  * 1-2 Navigational keywords (MUST include a real, recognizable brand name + store/official/website/cửa hàng/trang chủ, e.g. "cửa hàng ghế Sihoo chính hãng", "Keychron official store"). NEVER label a generic product phrase as Navigational!
-- Every single keyword must be directly relevant to the exact Niche/Topic provided.
-- If Language is Vietnamese: 100% natural, accurate Vietnamese spelling with complete diacritics. Zero typos, zero missing accents, zero unaccented text."""
+  * 2 Transactional keywords (clearly contain buy/order/price/deal or mua/giá/đặt mua/báo giá/khuyến mãi)
+  * 2 Commercial keywords (review/compare/top/best/product+audience, e.g. "bàn phím cơ cho lập trình viên", "best ergonomic chair under 500")
+  * 2 Informational keywords (how-to/what-is/guide/tips/cách/hướng dẫn/là gì/kinh nghiệm sử dụng)
+  * 1-2 Navigational keywords (MUST include a real brand name + store/official/website/cửa hàng/trang chủ, e.g. "cửa hàng ghế Sihoo chính hãng", "Keychron official store"). NEVER label a generic product phrase as Navigational!
+- If Niche contains multiple comma-separated topics, generate keywords covering all listed topics naturally.
+- If Language is Vietnamese: 100% natural, accurate Vietnamese spelling with complete diacritics. Zero typos, zero missing accents, zero English bleed."""
 
 TEACHER_CB_EXTRA = """
 
@@ -114,11 +117,15 @@ ADDITIONAL GENERATION INSTRUCTIONS (Teacher Guidance):
   * Commercial -> MOFU -> "Buyer's guide" or "FAQ" (style: Analytical/Persuasive, tone: Authoritative/Informative)
   * Transactional -> BOFU -> "Buyer's guide" (style: Persuasive, tone: Authoritative/Conversational)
   * Navigational -> MOFU or BOFU -> "Informational" or "FAQ" (style: Conversational/Informative, tone: Friendly/Formal)
-- Keep all text concise, specific, and high-value (~220-320 words total across all JSON fields so the brief is crisp and scannable).
-- If Language is Vietnamese: write ALL text fields (secondary_keywords, target_audience, key_talking_points, geo_blueprint, suggested_cta) in 100% natural, idiomatic Vietnamese with accurate diacritics. Keep enum values in exact English as specified in the schema."""
+- When Selected keywords (multiple keywords) are provided:
+  * You MUST select ONE exact string from the Selected keywords list as "primary_keyword" (prefer Commercial or broad Informational head term suitable for a Shopify blog post).
+  * You MUST include EVERY OTHER exact string from the Selected keywords list inside "secondary_keywords" (do NOT drop or rewrite any selected keyword!).
+  * Synthesize key_talking_points, comparison_table_idea, and faq_questions to address ALL selected keywords together.
+- Keep all text concise, concrete, and high-value (~220-320 words total across JSON fields).
+- If Language is Vietnamese: write ALL text fields (secondary_keywords, target_audience, key_talking_points, geo_blueprint, suggested_cta) in 100% natural Vietnamese with accurate diacritics. Keep enum values in exact English."""
 
 # ==============================================================================
-# 30 ALIGNED NICHE PROFILES (Matched Topics + Matched Business & Target Customer)
+# 23 ALIGNED NICHE PROFILES (115+ EN topics & 115+ VI topics, 100% matched context)
 # ==============================================================================
 NICHE_PROFILES = [
     {
@@ -216,7 +223,7 @@ NICHE_PROFILES = [
     {
         "id": "coffee_tea",
         "en_topics": ["Specialty Arabica Coffee Beans", "Cold Brew Coffee Maker", "Ceremonial Matcha Powder", "Vietnamese Robusta Coffee", "Organic Herbal Tea"],
-        "vi_topics": ["Cà phê rang xay nguyên chất", "Cách pha cà phê cold brew", "Bột trà xanh matcha Nhật Bản", "Cà phê đặc sản Arabica Cầu Đất", "Trà thảo mộc giúp ngủ ngon"],
+        "vi_topics": ["Cà phê rang xay nguyên chất", "Cà phê cold brew ủ lạnh", "Bột trà xanh matcha Nhật Bản", "Cà phê đặc sản Arabica Cầu Đất", "Trà thảo mộc giúp ngủ ngon"],
         "en_biz": [
             ("Small-batch specialty coffee roastery shipping freshly roasted beans nationwide.", "Home baristas and specialty coffee lovers aged 24-45."),
         ],
@@ -380,11 +387,58 @@ NICHE_PROFILES = [
     },
 ]
 
+PROFILE_BY_ID = {p["id"]: p for p in NICHE_PROFILES}
+
 # ==============================================================================
-# HELPER FUNCTIONS & QUALITY GATE
+# HELPER FUNCTIONS & UI CONTEXT SAMPLERS
 # ==============================================================================
 def has_vietnamese_diacritics(text: str) -> bool:
     return any(ch in VI_DIACRITICS for ch in text)
+
+
+def sample_four_way_context(profile: dict, lang: str) -> tuple[str, str, str]:
+    """
+    Samples all 4 real UI combinations for (Business description, Target customer):
+      - 35% none       (both empty)
+      - 35% both       (both filled, 100% niche-aligned)
+      - 15% biz_only   (only Business description filled)
+      - 15% cust_only  (only Target customer filled)
+    """
+    biz_pool = profile["vi_biz"] if lang == "vi" else profile["en_biz"]
+    full_biz, full_cust = random.choice(biz_pool)
+
+    r = random.random()
+    if r < 0.35:
+        return "", "", "none"
+    elif r < 0.70:
+        return full_biz, full_cust, "both"
+    elif r < 0.85:
+        return full_biz, "", "biz_only"
+    else:
+        return "", full_cust, "cust_only"
+
+
+def sample_niche_for_kw(lang: str):
+    """
+    Samples Niche/Topics matching Keywords.jsx:
+      - 75% single topic
+      - 25% multi-topic (2-3 related topics from same niche joined by ', ')
+    Plus 4-way aligned context (none / both / biz_only / cust_only).
+    """
+    profile = random.choice(NICHE_PROFILES)
+    topics_pool = profile["vi_topics"] if lang == "vi" else profile["en_topics"]
+
+    if random.random() < 0.25:
+        k = random.choice([2, 2, 3])
+        chosen = random.sample(topics_pool, min(k, len(topics_pool)))
+        topic_str = ", ".join(chosen)
+        topic_mode = "multi"
+    else:
+        topic_str = random.choice(topics_pool)
+        topic_mode = "single"
+
+    biz_desc, target_cust, ctx_mode = sample_four_way_context(profile, lang)
+    return profile["id"], topic_str, topic_mode, biz_desc, target_cust, ctx_mode
 
 
 def build_user_kw(topic: str, lang: str, business_desc: str = "", target_customer: str = "") -> str:
@@ -398,16 +452,19 @@ def build_user_kw(topic: str, lang: str, business_desc: str = "", target_custome
     return "\n".join(parts)
 
 
-def build_user_cb(
+def build_user_cb_single(
     keyword: str,
-    topic: str,
     lang: str,
+    topic: str = "",
     known_intent: str = "",
     business_desc: str = "",
     target_customer: str = "",
 ) -> str:
     lang_full = "Vietnamese" if lang == "vi" else "English (US)"
-    parts = [f"Primary keyword: {keyword}", f"Niche: {topic}", f"Language: {lang_full}"]
+    parts = [f"Primary keyword: {keyword}"]
+    if topic:
+        parts.append(f"Niche: {topic}")
+    parts.append(f"Language: {lang_full}")
     if known_intent:
         parts.append(f"Known intent: {known_intent}")
     if business_desc:
@@ -418,17 +475,36 @@ def build_user_cb(
     return "\n".join(parts)
 
 
-def sample_niche_context(lang: str):
-    profile = random.choice(NICHE_PROFILES)
-    topic = random.choice(profile["vi_topics"] if lang == "vi" else profile["en_topics"])
-    if random.random() < MISSING_CONTEXT_PROB:
-        biz_desc, target_cust = "", ""
-    else:
-        biz_pool = profile["vi_biz"] if lang == "vi" else profile["en_biz"]
-        biz_desc, target_cust = random.choice(biz_pool)
-    return profile["id"], topic, biz_desc, target_cust
+def build_user_cb_multi(
+    selected_items: list[dict],
+    lang: str,
+    topic: str = "",
+    business_desc: str = "",
+    target_customer: str = "",
+) -> str:
+    lang_full = "Vietnamese" if lang == "vi" else "English (US)"
+    lines = ["Selected keywords:"]
+    for item in selected_items:
+        kw = item["keyword"]
+        intent = item.get("intent", "")
+        if intent:
+            lines.append(f"- {kw} ({intent})")
+        else:
+            lines.append(f"- {kw}")
+    if topic:
+        lines.append(f"Niche: {topic}")
+    lines.append(f"Language: {lang_full}")
+    if business_desc:
+        lines.append(f"Business description: {business_desc}")
+    if target_customer:
+        lines.append(f"Target customer: {target_customer}")
+    lines.append("Generate a unified content brief covering all selected keywords.")
+    return "\n".join(lines)
 
 
+# ==============================================================================
+# REAL-TIME QUALITY GATE
+# ==============================================================================
 def check_kw_quality(obj: dict, lang: str) -> tuple[bool, str]:
     if not isinstance(obj, dict):
         return False, "not a dict"
@@ -451,7 +527,6 @@ def check_kw_quality(obj: dict, lang: str) -> tuple[bool, str]:
         if lang == "vi" and not has_vietnamese_diacritics(kw):
             vi_missing_diacritics += 1
 
-        # Block glaring intent contradictions
         if any(kw_l.startswith(p) for p in ["cách ", "hướng dẫn ", "how to ", "what is ", "why "]) and intent != "Informational":
             return False, f"how-to keyword mislabeled as {intent}: {kw}"
         if any(kw_l.startswith(p) for p in ["mua ", "đặt mua ", "buy ", "order "]) and intent == "Informational":
@@ -465,7 +540,13 @@ def check_kw_quality(obj: dict, lang: str) -> tuple[bool, str]:
     return True, "ok"
 
 
-def check_cb_quality(obj: dict, lang: str, known_intent: str = "") -> tuple[bool, str]:
+def check_cb_quality(
+    obj: dict,
+    lang: str,
+    mode: str,
+    known_intent: str = "",
+    selected_kws: list[str] = None,
+) -> tuple[bool, str]:
     if not isinstance(obj, dict):
         return False, "not a dict"
 
@@ -488,7 +569,7 @@ def check_cb_quality(obj: dict, lang: str, known_intent: str = "") -> tuple[bool
     if obj.get("recommended_tone") not in TONE_ENUM:
         return False, f"invalid tone: {obj.get('recommended_tone')}"
 
-    # Intent <-> Funnel strict consistency
+    # Intent <-> Funnel strict alignment
     if di == "Informational" and fs != "TOFU":
         return False, f"Informational must be TOFU, got {fs}"
     if di == "Commercial" and fs != "MOFU":
@@ -501,8 +582,10 @@ def check_cb_quality(obj: dict, lang: str, known_intent: str = "") -> tuple[bool
     sec = obj.get("secondary_keywords", [])
     pts = obj.get("key_talking_points", [])
     geo = obj.get("geo_blueprint", {})
-    if not isinstance(sec, list) or len(sec) < 2:
-        return False, "secondary_keywords < 2"
+    if not isinstance(sec, list) or len(sec) < 1:
+        return False, "secondary_keywords empty"
+    if mode != "multi_bulk" and len(sec) < 2:
+        return False, "single-mode secondary_keywords < 2"
     if not isinstance(pts, list) or len(pts) < 3:
         return False, "key_talking_points < 3"
     if not isinstance(geo, dict):
@@ -512,6 +595,19 @@ def check_cb_quality(obj: dict, lang: str, known_intent: str = "") -> tuple[bool
     faqs = geo.get("faq_questions", [])
     if not isinstance(faqs, list) or len(faqs) < 2:
         return False, "faq_questions < 2"
+
+    # Multi-keyword Bulk Selection integrity check:
+    # primary_keyword must be in selected_kws, and ALL selected_kws must appear in {primary} U secondary
+    if mode == "multi_bulk" and selected_kws:
+        sel_norm = {k.strip().lower() for k in selected_kws}
+        pk_norm = obj["primary_keyword"].strip().lower()
+        sec_norm = {str(s).strip().lower() for s in sec}
+        if pk_norm not in sel_norm:
+            return False, f"multi_bulk primary_keyword '{pk_norm}' not in selected list"
+        covered = {pk_norm} | sec_norm
+        missing = sel_norm - covered
+        if missing:
+            return False, f"multi_bulk dropped selected keywords: {missing}"
 
     if lang == "vi":
         check_blob = " ".join([
@@ -527,15 +623,20 @@ def check_cb_quality(obj: dict, lang: str, known_intent: str = "") -> tuple[bool
 
 
 # ==============================================================================
-# GEMINI MULTI-KEY ROUND-ROBIN MANAGER (google-genai SDK + legacy fallback)
+# GEMINI MULTI-KEY ROUND-ROBIN MANAGER (WITH AUTO MODEL FALLBACK)
 # ==============================================================================
 class GeminiKeyManager:
-    def __init__(self, keys: list[str], teacher_system: str, model_name: str = "gemini-3.5-flash-lite"):
+    def __init__(self, keys: list[str], teacher_system: str, model_name: str = "gemini-3.1-flash-lite"):
         self.keys = [k.strip() for k in keys if k.strip()]
         self.active_indices = list(range(len(self.keys)))
         self.rr_cursor = 0
         self.teacher_system = teacher_system
-        self.model_name = model_name
+        self.candidate_models = [model_name]
+        for fallback in ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite"]:
+            if fallback not in self.candidate_models:
+                self.candidate_models.append(fallback)
+        self.model_idx = 0
+        self.model_name = self.candidate_models[self.model_idx]
         self._clients = {}
         self._use_new_sdk = True
         self._init_clients()
@@ -543,10 +644,14 @@ class GeminiKeyManager:
     def _init_clients(self):
         try:
             from google import genai
+            from google.genai import types
             for idx, key in enumerate(self.keys):
-                self._clients[idx] = genai.Client(api_key=key)
+                self._clients[idx] = genai.Client(
+                    api_key=key,
+                    http_options=types.HttpOptions(timeout=30000),
+                )
             self._use_new_sdk = True
-            print(f"[INFO] Initialized {len(self.keys)} Gemini key(s) via google-genai SDK (Model: {self.model_name})", flush=True)
+            print(f"[INFO] Initialized {len(self.keys)} Gemini key(s) via google-genai SDK (Model: {self.model_name}, timeout=30s)", flush=True)
         except ImportError:
             import google.generativeai as genai_legacy
             self._use_new_sdk = False
@@ -589,12 +694,22 @@ class GeminiKeyManager:
                 err_str = str(e).lower()
                 is_daily_quota = ("quota" in err_str and ("per day" in err_str or "daily" in err_str)) or "exhausted" in err_str
                 if is_daily_quota and "per minute" not in err_str:
-                    print(f"\n[WARN] Gemini Key #{key_idx + 1} exhausted daily quota. Removing from active pool.", flush=True)
+                    print(f"\n[WARN] Gemini Key #{key_idx + 1} exhausted daily quota on {self.model_name}. Removing from active pool.", flush=True)
                     if key_idx in self.active_indices:
                         self.active_indices.remove(key_idx)
                     if self.active_indices:
                         continue
-                    raise RuntimeError(f"All Gemini API keys reached daily limit: {e}")
+
+                    # Fallback to next model before aborting
+                    if self.model_idx + 1 < len(self.candidate_models):
+                        self.model_idx += 1
+                        self.model_name = self.candidate_models[self.model_idx]
+                        self.active_indices = list(range(len(self.keys)))
+                        self.rr_cursor = 0
+                        print(f"\n[INFO] Switching to fallback model: {self.model_name} (all {len(self.keys)} key(s) reset to active)", flush=True)
+                        continue
+
+                    raise RuntimeError(f"All Gemini API keys reached daily limit across all candidate models: {e}")
 
                 if attempt == max_retries - 1:
                     raise e
@@ -627,7 +742,7 @@ def load_existing_stats(file_path: Path):
     if not file_path.exists():
         return 0, 0, 0, set()
     en_count, vi_count, total = 0, 0, 0
-    seen_pks = set()
+    seen_keys = set()
     with file_path.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -641,25 +756,27 @@ def load_existing_stats(file_path: Path):
                     en_count += 1
                 elif lang == "vi":
                     vi_count += 1
-                pk = meta.get("primary_keyword", "")
-                if pk:
-                    seen_pks.add(pk.lower().strip())
+                sk = meta.get("dedup_sig", "")
+                if sk:
+                    seen_keys.add(sk)
                 total += 1
             except Exception:
                 pass
-    return total, en_count, vi_count, seen_pks
+    return total, en_count, vi_count, seen_keys
 
 
-def load_keyword_pool_from_task1(kw_raw_path: Path) -> dict[str, list[dict]]:
+def load_task1_pools(kw_raw_path: Path):
     """
-    Extracts verified (keyword, intent, topic, biz_desc, target_cust) tuples
-    generated by Task 1 so Task 2 (CONTENT_BRIEF) has 100% unique keywords & true intents.
+    Loads two rich pools from Task 1 raw output:
+      1. single_pool[lang]: unique (keyword, intent, topic, niche_id) items balanced across 4 intents
+      2. cluster_pool[lang]: full keyword lists per Task-1 row (for realistic 2-5 keyword Bulk Selection)
     """
-    pools = {"en": [], "vi": []}
+    single_pool = {"en": [], "vi": []}
+    cluster_pool = {"en": [], "vi": []}
     if not kw_raw_path.exists():
-        return pools
+        return single_pool, cluster_pool
 
-    seen = {"en": set(), "vi": set()}
+    seen_single = {"en": set(), "vi": set()}
     with kw_raw_path.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -669,39 +786,43 @@ def load_keyword_pool_from_task1(kw_raw_path: Path) -> dict[str, list[dict]]:
                 rec = json.loads(line)
                 meta = rec.get("_meta", {})
                 lang = meta.get("lang", "")
-                if lang not in pools:
+                if lang not in single_pool:
                     continue
                 topic = meta.get("topic", "")
-                biz_desc = meta.get("biz_desc", "")
-                target_cust = meta.get("target_cust", "")
+                niche_id = meta.get("niche_id", NICHE_PROFILES[0]["id"])
                 ast = json.loads(rec["messages"][2]["content"])
-                for item in ast.get("keywords", []):
-                    if not isinstance(item, dict):
-                        continue
-                    kw = str(item.get("keyword", "")).strip()
-                    intent = item.get("intent", "")
-                    key = kw.lower()
-                    if kw and intent in INTENT_ENUM and key not in seen[lang]:
-                        seen[lang].add(key)
-                        pools[lang].append({
-                            "keyword": kw,
-                            "intent": intent,
+                kws = [
+                    {"keyword": str(it["keyword"]).strip(), "intent": it["intent"]}
+                    for it in ast.get("keywords", [])
+                    if isinstance(it, dict) and it.get("keyword") and it.get("intent") in INTENT_ENUM
+                ]
+                if len(kws) >= 3:
+                    cluster_pool[lang].append({
+                        "keywords": kws,
+                        "topic": topic,
+                        "niche_id": niche_id,
+                    })
+                for it in kws:
+                    k_norm = it["keyword"].lower()
+                    if k_norm not in seen_single[lang]:
+                        seen_single[lang].add(k_norm)
+                        single_pool[lang].append({
+                            "keyword": it["keyword"],
+                            "intent": it["intent"],
                             "topic": topic,
-                            "biz_desc": biz_desc,
-                            "target_cust": target_cust,
+                            "niche_id": niche_id,
                         })
             except Exception:
                 continue
 
-    # Shuffle and balance intent buckets for fair representation
     for lang in ["en", "vi"]:
+        random.shuffle(cluster_pool[lang])
         by_intent = {i: [] for i in INTENT_ENUM}
-        for entry in pools[lang]:
+        for entry in single_pool[lang]:
             by_intent[entry["intent"]].append(entry)
         for lst in by_intent.values():
             random.shuffle(lst)
         interleaved = []
-        # Interleave: 3 Commercial, 3 Informational, 3 Transactional, 1 Navigational
         pattern = ["Commercial", "Informational", "Transactional", "Commercial", "Informational", "Transactional", "Navigational"]
         while any(by_intent.values()):
             added = False
@@ -711,13 +832,33 @@ def load_keyword_pool_from_task1(kw_raw_path: Path) -> dict[str, list[dict]]:
                     added = True
             if not added:
                 break
-        pools[lang] = interleaved
+        single_pool[lang] = interleaved
 
-    print(f"[INFO] Loaded Task-1 keyword pool for Content Brief: EN={len(pools['en'])} unique KWs | VI={len(pools['vi'])} unique KWs", flush=True)
-    return pools
+    print(
+        f"[INFO] Loaded Task-1 pools -> Single KWs: EN={len(single_pool['en'])}, VI={len(single_pool['vi'])} | "
+        f"Bulk clusters: EN={len(cluster_pool['en'])}, VI={len(cluster_pool['vi'])}",
+        flush=True,
+    )
+    return single_pool, cluster_pool
 
 
-def generate(task: str, out_path: Path, provider: str = "gemini", target_per_task: int = TARGET_PER_TASK, kw_raw_path: Path = None) -> bool:
+def build_cb_mode_schedule(count: int) -> list[str]:
+    """
+    Exact deterministic schedule per language:
+      - 45% single_known (1 row from table WITH Known intent)
+      - 40% multi_bulk   (2-5 rows selected on Bulk Bar)
+      - 15% single_free  (1 free keyword WITHOUT Known intent)
+    """
+    n_known = int(round(count * 0.45))
+    n_multi = int(round(count * 0.40))
+    n_free = count - n_known - n_multi
+    schedule = ["single_known"] * n_known + ["multi_bulk"] * n_multi + ["single_free"] * n_free
+    random.seed(42 + count)
+    random.shuffle(schedule)
+    return schedule
+
+
+def generate(task: str, out_path: Path, provider: str = "gemini", target_per_task: int = TARGET_PER_TASK, kw_raw_path: Path = None, gemini_model: str = "gemini-3.1-flash-lite") -> bool:
     student_system = SYSTEM_KW if task == "KEYWORD_RESEARCH" else SYSTEM_CB
     teacher_system = student_system + (TEACHER_KW_EXTRA if task == "KEYWORD_RESEARCH" else TEACHER_CB_EXTRA)
 
@@ -735,30 +876,28 @@ def generate(task: str, out_path: Path, provider: str = "gemini", target_per_tas
             raise ValueError("GEMINI_API_KEY or GEMINI_API_KEYS environment variable is not set.")
         key_list = [k.strip() for k in raw_keys.split(",") if k.strip()]
         num_keys = len(key_list)
-        gemini_mgr = GeminiKeyManager(key_list, teacher_system)
+        gemini_mgr = GeminiKeyManager(key_list, teacher_system, model_name=gemini_model)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     target_en = int(target_per_task * EN_RATIO)
     target_vi = target_per_task - target_en
 
-    existing_total, existing_en, existing_vi, seen_pks = load_existing_stats(out_path)
+    existing_total, existing_en, existing_vi, seen_sigs = load_existing_stats(out_path)
     if existing_total > 0:
-        print(f"[INFO] Found existing v2 data in {out_path.name}: {existing_total} samples (EN: {existing_en}, VI: {existing_vi}). Resuming...", flush=True)
+        print(f"[INFO] Found existing data in {out_path.name}: {existing_total} samples (EN: {existing_en}, VI: {existing_vi}). Resuming...", flush=True)
 
-    kw_pools = {"en": [], "vi": []}
+    single_pool, cluster_pool = {"en": [], "vi": []}, {"en": [], "vi": []}
     if task == "CONTENT_BRIEF":
         src_kw = kw_raw_path or (out_path.parent / "keyword_research_raw.jsonl")
-        kw_pools = load_keyword_pool_from_task1(src_kw)
-        # Filter out already-generated primary keywords
+        single_pool, cluster_pool = load_task1_pools(src_kw)
         for lang in ["en", "vi"]:
-            kw_pools[lang] = [e for e in kw_pools[lang] if e["keyword"].lower().strip() not in seen_pks]
+            single_pool[lang] = [e for e in single_pool[lang] if f"single:{e['keyword'].lower()}" not in seen_sigs]
 
     plan = [
         ("en", target_en, existing_en),
         ("vi", target_vi, existing_vi),
     ]
-    # Faster throughput with multiple keys (round-robin keeps each key comfortably under RPM limit)
     sleep_between = max(1.2, 3.2 / num_keys) if provider == "gemini" else 0.3
     total_written = existing_total
 
@@ -772,38 +911,67 @@ def generate(task: str, out_path: Path, provider: str = "gemini", target_per_tas
                 continue
 
             print(f"\n[INFO] Task {task}: generating {remaining} samples for {lang_label} (progress: {already_done}/{count})...", flush=True)
-            pool_idx = 0
 
+            cb_schedule = build_cb_mode_schedule(count) if task == "CONTENT_BRIEF" else []
+            s_idx = 0
+            c_idx = 0
             i = already_done
             consecutive_failures = 0
+
             while i < count:
                 if task == "KEYWORD_RESEARCH":
-                    niche_id, topic, biz_desc, target_cust = sample_niche_context(lang)
+                    niche_id, topic, topic_mode, biz_desc, target_cust, ctx_mode = sample_niche_for_kw(lang)
                     user_msg = build_user_kw(topic, lang, biz_desc, target_cust)
+                    cb_mode = "kw"
                     known_intent = ""
-                    pk_for_meta = ""
+                    selected_kws_list = None
+                    dedup_sig = f"kw:{lang}:{i}"
+                    has_niche = True
                 else:
-                    if pool_idx < len(kw_pools[lang]):
-                        entry = kw_pools[lang][pool_idx]
-                        pool_idx += 1
-                        kw = entry["keyword"]
-                        true_intent = entry["intent"]
-                        topic = entry["topic"]
-                        biz_desc = entry["biz_desc"] if random.random() >= MISSING_CONTEXT_PROB else ""
-                        target_cust = entry["target_cust"] if biz_desc else ""
-                        # 50% provide TRUE known_intent, 50% omit so model learns both modes
-                        known_intent = true_intent if random.random() < 0.50 else ""
-                        niche_id = "from_task1"
-                    else:
-                        niche_id, topic, biz_desc, target_cust = sample_niche_context(lang)
-                        kw = topic
-                        known_intent = ""
-                    user_msg = build_user_cb(kw, topic, lang, known_intent, biz_desc, target_cust)
-                    pk_for_meta = kw
+                    cb_mode = cb_schedule[i]
+                    has_niche = random.random() >= 0.20  # 80% with Niche, 20% without Niche
 
-                # Generate with quality-gate retry (up to 2 attempts per sample)
+                    if cb_mode == "multi_bulk" and cluster_pool[lang]:
+                        cluster = cluster_pool[lang][c_idx % len(cluster_pool[lang])]
+                        c_idx += 1
+                        k_pick = random.choice([2, 3, 3, 4, 5])
+                        picked = random.sample(cluster["keywords"], min(k_pick, len(cluster["keywords"])))
+                        selected_kws_list = [p["keyword"] for p in picked]
+                        niche_id = cluster["niche_id"]
+                        topic = cluster["topic"] if has_niche else ""
+                        profile = PROFILE_BY_ID.get(niche_id, random.choice(NICHE_PROFILES))
+                        biz_desc, target_cust, ctx_mode = sample_four_way_context(profile, lang)
+                        user_msg = build_user_cb_multi(picked, lang, topic, biz_desc, target_cust)
+                        known_intent = ""
+                        topic_mode = "multi_bulk"
+                        dedup_sig = "multi:" + "|".join(sorted(k.lower() for k in selected_kws_list))
+                    else:
+                        if s_idx < len(single_pool[lang]):
+                            entry = single_pool[lang][s_idx]
+                            s_idx += 1
+                            kw = entry["keyword"]
+                            true_intent = entry["intent"]
+                            niche_id = entry["niche_id"]
+                            topic = entry["topic"] if has_niche else ""
+                            profile = PROFILE_BY_ID.get(niche_id, random.choice(NICHE_PROFILES))
+                        else:
+                            profile = random.choice(NICHE_PROFILES)
+                            niche_id = profile["id"]
+                            raw_t = random.choice(profile["vi_topics"] if lang == "vi" else profile["en_topics"])
+                            kw = raw_t
+                            true_intent = "Commercial"
+                            topic = raw_t if has_niche else ""
+
+                        biz_desc, target_cust, ctx_mode = sample_four_way_context(profile, lang)
+                        known_intent = true_intent if cb_mode == "single_known" else ""
+                        selected_kws_list = None
+                        user_msg = build_user_cb_single(kw, lang, topic, known_intent, biz_desc, target_cust)
+                        topic_mode = cb_mode
+                        dedup_sig = f"single:{kw.lower()}"
+
+                # Generate with real-time quality gate (up to 2 attempts per sample)
                 saved = False
-                for q_attempt in range(2):
+                for _ in range(2):
                     try:
                         if provider == "openai":
                             assistant_raw = call_openai_with_retry(client, teacher_system, user_msg)
@@ -815,14 +983,13 @@ def generate(task: str, out_path: Path, provider: str = "gemini", target_per_tas
                         if task == "KEYWORD_RESEARCH":
                             ok, reason = check_kw_quality(parsed, lang)
                         else:
-                            ok, reason = check_cb_quality(parsed, lang, known_intent)
+                            ok, reason = check_cb_quality(parsed, lang, cb_mode, known_intent, selected_kws_list)
 
                         if not ok:
-                            print(f"[FILTER] Rejected sample ({reason}), retrying...", flush=True)
+                            print(f"[FILTER] Rejected ({cb_mode}: {reason}), retrying...", flush=True)
                             time.sleep(1.0)
                             continue
 
-                        # Re-serialize cleanly to compact consistent JSON
                         clean_assistant = json.dumps(parsed, ensure_ascii=False)
 
                         record = {
@@ -836,9 +1003,11 @@ def generate(task: str, out_path: Path, provider: str = "gemini", target_per_tas
                                 "lang": lang,
                                 "niche_id": niche_id,
                                 "topic": topic,
-                                "biz_desc": biz_desc,
-                                "target_cust": target_cust,
-                                "primary_keyword": pk_for_meta,
+                                "topic_mode": topic_mode,
+                                "ctx_mode": ctx_mode,
+                                "has_niche": has_niche,
+                                "cb_mode": cb_mode,
+                                "dedup_sig": dedup_sig,
                             },
                         }
 
@@ -869,16 +1038,17 @@ def generate(task: str, out_path: Path, provider: str = "gemini", target_per_tas
                         print("[ERROR] Too many consecutive failures. Stopping cleanly.", flush=True)
                         return False
 
-    print(f"\n[SUCCESS] Task {task} complete! Total {total_written} clean v2 samples saved in {out_path}", flush=True)
+    print(f"\n[SUCCESS] Task {task} complete! Total {total_written} clean samples saved in {out_path}", flush=True)
     return True
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate clean v2 synthetic dataset for QLoRA fine-tuning")
+    parser = argparse.ArgumentParser(description="Generate full UI-coverage v2.1 dataset for QLoRA fine-tuning")
     parser.add_argument("--task", choices=["KEYWORD_RESEARCH", "CONTENT_BRIEF", "ALL"], default="ALL")
     parser.add_argument("--out", default="../data/raw/", help="Output directory or file path")
     parser.add_argument("--provider", choices=["openai", "gemini"], default="gemini")
     parser.add_argument("--target", type=int, default=TARGET_PER_TASK, help="Samples per task (default: 1200 -> 2400 total)")
+    parser.add_argument("--gemini-model", default="gemini-3.1-flash-lite", help="Gemini model name (default: gemini-3.1-flash-lite)")
     args = parser.parse_args()
 
     out = Path(args.out)
@@ -886,18 +1056,18 @@ if __name__ == "__main__":
     if args.task == "ALL":
         kw_file = out / "keyword_research_raw.jsonl"
         cb_file = out / "content_brief_raw.jsonl"
-        success_kw = generate("KEYWORD_RESEARCH", kw_file, args.provider, args.target)
+        success_kw = generate("KEYWORD_RESEARCH", kw_file, args.provider, args.target, gemini_model=args.gemini_model)
         if not success_kw:
             print("\n[STOP] KEYWORD_RESEARCH paused before completing. Re-run with fresh API keys to auto-resume.")
             sys.exit(1)
-        success_cb = generate("CONTENT_BRIEF", cb_file, args.provider, args.target, kw_raw_path=kw_file)
+        success_cb = generate("CONTENT_BRIEF", cb_file, args.provider, args.target, kw_raw_path=kw_file, gemini_model=args.gemini_model)
         if not success_cb:
             print("\n[STOP] CONTENT_BRIEF paused before completing. Re-run with fresh API keys to auto-resume.")
             sys.exit(1)
     elif args.task == "KEYWORD_RESEARCH":
         file = out if out.suffix == ".jsonl" else out / "keyword_research_raw.jsonl"
-        generate("KEYWORD_RESEARCH", file, args.provider, args.target)
+        generate("KEYWORD_RESEARCH", file, args.provider, args.target, gemini_model=args.gemini_model)
     else:
         file = out if out.suffix == ".jsonl" else out / "content_brief_raw.jsonl"
         kw_src = file.parent / "keyword_research_raw.jsonl"
-        generate("CONTENT_BRIEF", file, args.provider, args.target, kw_raw_path=kw_src)
+        generate("CONTENT_BRIEF", file, args.provider, args.target, kw_raw_path=kw_src, gemini_model=args.gemini_model)

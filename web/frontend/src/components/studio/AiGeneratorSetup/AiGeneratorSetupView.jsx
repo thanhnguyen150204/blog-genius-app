@@ -52,14 +52,20 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration, initialBrie
   // Auto pre-fill from Content Brief when navigated from Keywords page (Module 1 -> Module 2)
   useEffect(() => {
     if (initialBrief) {
+      if (initialBrief.language) {
+        const isVi = String(initialBrief.language).toLowerCase().startsWith("vi");
+        setLanguage(isVi ? "Vietnamese" : "English(US)");
+      }
       if (initialBrief.primary_keyword) {
         const kws = [
           initialBrief.primary_keyword,
           ...(initialBrief.secondary_keywords || []),
         ];
         setKeywords(kws);
-        setTitle(`The Comprehensive Guide to ${initialBrief.primary_keyword}`);
-        setErrors((prev) => ({ ...prev, keywords: false, title: false }));
+        setErrors((prev) => ({ ...prev, keywords: false }));
+      }
+      if (initialBrief.business_desc) {
+        setBusinessDesc(initialBrief.business_desc);
       }
       if (initialBrief.target_audience) {
         setTargetCustomer(initialBrief.target_audience);
@@ -495,8 +501,8 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration, initialBrie
       mode: "ai",
       isAiGenerated: true,
       creationMode: "ai",
-      intent: "Informational",
-      type: "Informational",
+      intent: initialBrief?.dominant_intent || "Informational",
+      type: initialBrief?.recommended_content_type || "Informational",
       author: "AI Assistant",
       lastModified: "Oct 7, 2026, 08:57 PM",
       isNew: true,

@@ -71,7 +71,7 @@ Rules:
 - Language of keywords must strictly match the Language parameter."""
 
 SYSTEM_CB = """You are an expert SEO & GEO content strategist for Shopify e-commerce blogs.
-Given a primary keyword and optional context, return ONLY a JSON object (no markdown, no explanation) in this exact schema:
+Given a primary keyword (or a list of selected keywords) and optional context, return ONLY a JSON object (no markdown, no explanation) in this exact schema:
 {
   "primary_keyword": "<string>",
   "secondary_keywords": ["<string>", ...],
@@ -90,11 +90,11 @@ Given a primary keyword and optional context, return ONLY a JSON object (no mark
   "suggested_cta": "<string>"
 }
 Rules:
-- secondary_keywords: 2-4 semantically related keywords.
+- If Selected keywords are provided: pick the broadest, highest-value topic as primary_keyword, put ALL remaining selected keywords into secondary_keywords (optionally add 1 more if needed so there are 2-5 items), and synthesize a unified dominant_intent and strategy covering every selected keyword.
+- If a single Primary keyword is provided: keep it as primary_keyword, generate 2-4 semantically related secondary_keywords, and if Known intent is provided, dominant_intent must match it.
 - key_talking_points: 3-5 items, each containing an E-E-A-T signal (stat, study, certification, or expert benchmark).
 - faq_questions: 2-4 conversational AI-search questions.
 - Intent-to-Funnel alignment: Informational->TOFU, Commercial->MOFU, Transactional->BOFU, Navigational->MOFU or BOFU.
-- If Known intent is provided, dominant_intent must match it.
 - All enum fields must use exactly one listed value.
 - Language of all text fields must strictly match the Language parameter with accurate spelling and diacritics."""
 
@@ -203,8 +203,13 @@ def run_gemini_fallback(system: str, user_prompt: str) -> Dict[str, Any]:
 
         api_key = os.environ.get("GEMINI_API_KEY", "")
         if not api_key:
-            # Try reading from .env in parent directories
-            env_paths = [Path(__file__).parents[2] / ".env", Path(__file__).parents[3] / ".env"]
+            # Try reading from .env in parent directories and web/backend
+            env_paths = [
+                Path(__file__).parents[2] / ".env",
+                Path(__file__).parents[3] / ".env",
+                Path(__file__).parents[3] / "web" / "backend" / ".env",
+                Path(__file__).parents[4] / ".env",
+            ]
             for ep in env_paths:
                 if ep.exists():
                     for line in ep.read_text(encoding="utf-8").splitlines():
@@ -214,20 +219,29 @@ def run_gemini_fallback(system: str, user_prompt: str) -> Dict[str, Any]:
 
         if api_key:
             genai.configure(api_key=api_key)
-            g_model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
-                system_instruction=system,
-                generation_config={"response_mime_type": "application/json", "temperature": 0.7},
-            )
-            resp = g_model.generate_content(user_prompt)
-            return extract_json(resp.text)
+            # Try multiple model names for compatibility
+            for model_name in ["gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-pro"]:
+                try:
+                    g_model = genai.GenerativeModel(
+                        model_name=model_name,
+                        system_instruction=system,
+                        generation_config={"response_mime_type": "application/json", "temperature": 0.7},
+                    )
+                    resp = g_model.generate_content(user_prompt)
+                    result = extract_json(resp.text)
+                    if result:
+                        logger.info(f"Gemini fallback succeeded with model: {model_name}")
+                        return result
+                except Exception as model_err:
+                    logger.warning(f"Gemini model {model_name} failed: {model_err}")
+                    continue
     except Exception as e:
         logger.warning(f"Gemini fallback failed: {e}. Generating structured fallback.")
 
     return {}
 
 
-def run_qlora_inference(system: str, user_prompt: str, max_new_tokens: int = 768) -> Dict[str, Any]:
+def run_qlora_inference(system: str, user_prompt: str, max_new_tokens: int = 550) -> Dict[str, Any]:
     global model, tokenizer
     if model is not None and tokenizer is not None:
         try:
@@ -243,13 +257,14 @@ def run_qlora_inference(system: str, user_prompt: str, max_new_tokens: int = 768
                 inputs = {k: v.to("cuda") for k, v in inputs.items()}
 
             input_len = inputs["input_ids"].shape[1]
-            with torch.no_grad():
+            with torch.inference_mode():
                 generated_ids = model.generate(
                     **inputs,
                     max_new_tokens=max_new_tokens,
                     temperature=0.2,
                     top_p=0.85,
                     do_sample=True,
+                    use_cache=True,
                     pad_token_id=tokenizer.eos_token_id,
                 )
             generated_tokens = generated_ids[0][input_len:]
@@ -258,12 +273,11 @@ def run_qlora_inference(system: str, user_prompt: str, max_new_tokens: int = 768
         except Exception as e:
             logger.error(f"Inference error: {e}. Using fallback.")
 
-    # Fallback path
+    # Fallback path if model not loaded or error
     fallback_data = run_gemini_fallback(system, user_prompt)
     if fallback_data:
         return fallback_data
 
-    # Deterministic safe template if network & torch are both unavailable
     return {}
 
 
@@ -362,44 +376,88 @@ def research_keywords(req: KeywordResearchRequest):
 
 @app.post("/api/research/brief", response_model=ContentBriefResponse)
 def generate_content_brief(req: ContentBriefRequest):
+    selected = [s for s in (req.selected_keywords or []) if s.keyword and s.keyword.strip()]
+    is_multi = len(selected) >= 2
+
+    if not is_multi and not (req.primary_keyword and req.primary_keyword.strip()):
+        if len(selected) == 1:
+            req.primary_keyword = selected[0].keyword.strip()
+            if not req.known_intent and selected[0].intent:
+                req.known_intent = selected[0].intent
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either primary_keyword or selected_keywords is required.",
+            )
+
     lang_full = "English (US)" if req.language.lower().startswith("en") else "Vietnamese"
-    parts = [f"Primary keyword: {req.primary_keyword.strip()}"]
-    if req.niche:
-        parts.append(f"Niche: {req.niche.strip()}")
-    parts.append(f"Language: {lang_full}")
-    if req.known_intent:
-        parts.append(f"Known intent: {req.known_intent.strip()}")
-    if req.business_desc:
-        parts.append(f"Business description: {req.business_desc.strip()}")
-    if req.target_customer:
-        parts.append(f"Target customer: {req.target_customer.strip()}")
-    parts.append("Generate a content brief.")
+
+    if is_multi:
+        parts = ["Selected keywords:"]
+        for item in selected:
+            kw_s = item.keyword.strip()
+            if item.intent and item.intent.strip():
+                parts.append(f"- {kw_s} ({item.intent.strip()})")
+            else:
+                parts.append(f"- {kw_s}")
+        if req.niche:
+            parts.append(f"Niche: {req.niche.strip()}")
+        parts.append(f"Language: {lang_full}")
+        if req.business_desc:
+            parts.append(f"Business description: {req.business_desc.strip()}")
+        if req.target_customer:
+            parts.append(f"Target customer: {req.target_customer.strip()}")
+        parts.append("Generate a unified content brief covering all selected keywords.")
+    else:
+        parts = [f"Primary keyword: {req.primary_keyword.strip()}"]
+        if req.niche:
+            parts.append(f"Niche: {req.niche.strip()}")
+        parts.append(f"Language: {lang_full}")
+        if req.known_intent:
+            parts.append(f"Known intent: {req.known_intent.strip()}")
+        if req.business_desc:
+            parts.append(f"Business description: {req.business_desc.strip()}")
+        if req.target_customer:
+            parts.append(f"Target customer: {req.target_customer.strip()}")
+        parts.append("Generate a content brief.")
+
     user_prompt = "\n".join(parts)
 
+    # Run fine-tuned QLoRA model with 550 tokens to guarantee 100% full detail for all 10 fields & E-E-A-T
     result = run_qlora_inference(SYSTEM_CB, user_prompt, max_new_tokens=550)
 
     # Check validity of required fields
     if not result or "primary_keyword" not in result or "geo_blueprint" not in result:
         # Fallback template with complete E-E-A-T and GEO structure matching requested language
         is_en = req.language.lower().startswith("en")
-        intent = req.known_intent or "Commercial"
-        kw = req.primary_keyword
+        if is_multi:
+            # Prefer Commercial or Informational as primary keyword for blog SEO
+            primary_item = next(
+                (s for s in selected if (s.intent or "").lower() in ("commercial", "informational")),
+                selected[0],
+            )
+            kw = primary_item.keyword.strip()
+            intent = primary_item.intent or "Commercial"
+            fallback_sec = [s.keyword.strip() for s in selected if s.keyword.strip().lower() != kw.lower()]
+        else:
+            kw = req.primary_keyword.strip()
+            intent = req.known_intent or "Commercial"
+            fallback_sec = (
+                [f"best {kw} for beginners", f"{kw} buying guide", f"top rated {kw} comparison"]
+                if is_en
+                else [f"{kw} chính hãng", f"đánh giá {kw}", f"kinh nghiệm chọn {kw}"]
+            )
 
         if is_en:
             result = {
                 "primary_keyword": kw,
-                "secondary_keywords": [
-                    f"best {kw} for beginners",
-                    f"{kw} buying guide",
-                    f"top rated {kw} comparison",
-                    f"affordable {kw} deals",
-                ],
+                "secondary_keywords": fallback_sec,
                 "dominant_intent": intent,
                 "funnel_stage": "MOFU" if intent == "Commercial" else ("BOFU" if intent == "Transactional" else "TOFU"),
-                "recommended_content_type": "Buyer's Guide" if intent in ["Commercial", "Transactional"] else "In-depth Guide",
-                "recommended_style": "Persuasive & Analytical",
-                "recommended_tone": "Authoritative & Objective",
-                "target_audience": f"Shoppers and fitness enthusiasts actively searching for reliable, high-performance {kw} solutions.",
+                "recommended_content_type": "Buyer's guide" if intent in ["Commercial", "Transactional"] else "Informational",
+                "recommended_style": "Analytical" if intent == "Commercial" else ("Persuasive" if intent == "Transactional" else "Informative"),
+                "recommended_tone": "Authoritative" if intent in ["Commercial", "Transactional"] else "Friendly",
+                "target_audience": f"Shoppers actively researching reliable, high-value {kw} options.",
                 "key_talking_points": [
                     f"Industry benchmarks and core evaluation criteria for selecting {kw} in 2026.",
                     f"Common buyer pitfalls and low-quality warning signs to avoid.",
@@ -420,16 +478,12 @@ def generate_content_brief(req: ContentBriefRequest):
         else:
             result = {
                 "primary_keyword": kw,
-                "secondary_keywords": [
-                    f"{kw} chính hãng",
-                    f"đánh giá {kw}",
-                    f"kinh nghiệm chọn {kw}",
-                ],
+                "secondary_keywords": fallback_sec,
                 "dominant_intent": intent,
                 "funnel_stage": "MOFU" if intent == "Commercial" else ("BOFU" if intent == "Transactional" else "TOFU"),
-                "recommended_content_type": "Buyer's Guide" if intent in ["Commercial", "Transactional"] else "In-depth Guide",
-                "recommended_style": "Persuasive & Insightful",
-                "recommended_tone": "Authoritative & Objective",
+                "recommended_content_type": "Buyer's guide" if intent in ["Commercial", "Transactional"] else "Informational",
+                "recommended_style": "Analytical" if intent == "Commercial" else ("Persuasive" if intent == "Transactional" else "Informative"),
+                "recommended_tone": "Authoritative" if intent in ["Commercial", "Transactional"] else "Friendly",
                 "target_audience": f"Độc giả và khách hàng đang tìm kiếm giải pháp liên quan đến {kw} chất lượng cao.",
                 "key_talking_points": [
                     f"Phân tích chuyên sâu về các tiêu chuẩn cốt lõi khi tìm kiếm {kw} theo dữ liệu thị trường mới nhất.",
@@ -455,13 +509,15 @@ def generate_content_brief(req: ContentBriefRequest):
         faq_questions=geo_data.get("faq_questions", []),
     )
 
+    fallback_pk = (selected[0].keyword.strip() if is_multi else (req.primary_keyword or "")).strip()
+
     return ContentBriefResponse(
-        primary_keyword=result.get("primary_keyword", req.primary_keyword),
+        primary_keyword=result.get("primary_keyword", fallback_pk),
         secondary_keywords=result.get("secondary_keywords", []),
         dominant_intent=result.get("dominant_intent", "Informational"),
         funnel_stage=result.get("funnel_stage", "TOFU"),
-        recommended_content_type=result.get("recommended_content_type", "Comprehensive Guide"),
-        recommended_style=result.get("recommended_style", "Educational"),
+        recommended_content_type=result.get("recommended_content_type", "Informational"),
+        recommended_style=result.get("recommended_style", "Informative"),
         recommended_tone=result.get("recommended_tone", "Authoritative"),
         target_audience=result.get("target_audience", "General audience"),
         key_talking_points=result.get("key_talking_points", []),

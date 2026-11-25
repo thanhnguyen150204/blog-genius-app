@@ -56,9 +56,17 @@ class GeoBlueprint(BaseModel):
     faq_questions: List[str] = Field(default_factory=list, description="2-4 user questions for FAQ Schema markup")
 
 
+class SelectedKeywordItem(BaseModel):
+    keyword: str = Field(..., description="Selected keyword phrase")
+    intent: Optional[str] = Field(None, description="Known search intent of this keyword")
+
+
 class ContentBriefRequest(BaseModel):
-    primary_keyword: str = Field(..., description="Primary seed keyword")
-    niche: Optional[str] = Field(None, description="Niche context (optional)")
+    primary_keyword: Optional[str] = Field(None, description="Primary seed keyword (single-row mode)")
+    selected_keywords: Optional[List[SelectedKeywordItem]] = Field(
+        None, description="List of 2+ selected keywords with intents (Bulk Selection mode)"
+    )
+    niche: Optional[str] = Field(None, description="Niche or topics context (optional)")
     known_intent: Optional[str] = Field(None, description="Pre-classified search intent if available")
     language: str = Field("vi", description="Language code: 'vi' or 'en'")
     business_desc: Optional[str] = Field(None, description="Optional business description")

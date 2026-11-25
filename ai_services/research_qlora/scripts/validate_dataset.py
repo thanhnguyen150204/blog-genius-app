@@ -1,12 +1,14 @@
 """
-Module: validate_dataset.py (v2)
-Description: Strictly validates, deduplicates, audits quality metrics (EN/VI balance, Intent balance,
+Module: validate_dataset.py (v2.1 — Full UI-Coverage Validator)
+Description: Strictly validates, deduplicates, audits all UI cases (EN/VI balance, Intent balance,
+             4 context combinations, single/multi-topic, single_known/multi_bulk/single_free CB,
              Intent<->Funnel alignment, Vietnamese diacritics), and exports clean ChatML JSONL.
 """
 
 import argparse
 import hashlib
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -26,6 +28,28 @@ def has_vi_diacritics(text: str) -> bool:
     return any(ch in VI_DIACRITICS for ch in text)
 
 
+def parse_selected_keywords(user_msg: str) -> list[str]:
+    if "Selected keywords:" not in user_msg:
+        return []
+    kws = []
+    for line in user_msg.splitlines():
+        line = line.strip()
+        if line.startswith("- "):
+            raw = line[2:].strip()
+            # Strip trailing " (Intent)"
+            raw = re.sub(r"\s*\((Informational|Commercial|Transactional|Navigational)\)\s*$", "", raw)
+            if raw:
+                kws.append(raw)
+    return kws
+
+
+def parse_known_intent(user_msg: str) -> str:
+    for line in user_msg.splitlines():
+        if line.startswith("Known intent:"):
+            return line.split(":", 1)[1].strip()
+    return ""
+
+
 def validate_kw_response(obj: dict, is_vi: bool) -> list[str]:
     errors = []
     if not isinstance(obj, dict):
@@ -38,7 +62,7 @@ def validate_kw_response(obj: dict, is_vi: bool) -> list[str]:
     vi_no_accents = 0
     for idx, item in enumerate(kws):
         if not isinstance(item, dict):
-            errors.append(f"keywords[{idx}] must be an object with 'keyword' and 'intent'")
+            errors.append(f"keywords[{idx}] must be an object")
             continue
 
         kw_val = item.get("keyword")
@@ -57,7 +81,7 @@ def validate_kw_response(obj: dict, is_vi: bool) -> list[str]:
     return errors
 
 
-def validate_cb_response(obj: dict, is_vi: bool) -> list[str]:
+def validate_cb_response(obj: dict, user_msg: str, is_vi: bool) -> list[str]:
     errors = []
     if not isinstance(obj, dict):
         return ["Response is not a JSON object"]
@@ -80,7 +104,12 @@ def validate_cb_response(obj: dict, is_vi: bool) -> list[str]:
     if obj.get("recommended_tone") not in TONE_ENUM:
         errors.append(f"recommended_tone '{obj.get('recommended_tone')}' not in enum")
 
-    # Strict Intent <-> Funnel consistency check
+    # Known intent consistency
+    known_intent = parse_known_intent(user_msg)
+    if known_intent and di != known_intent:
+        errors.append(f"dominant_intent '{di}' != Known intent '{known_intent}'")
+
+    # Strict Intent <-> Funnel consistency
     if di == "Informational" and fs != "TOFU":
         errors.append(f"Intent/Funnel mismatch: Informational -> {fs}")
     elif di == "Commercial" and fs != "MOFU":
@@ -91,8 +120,21 @@ def validate_cb_response(obj: dict, is_vi: bool) -> list[str]:
         errors.append(f"Intent/Funnel mismatch: Navigational -> {fs}")
 
     sec_kw = obj.get("secondary_keywords", [])
-    if not isinstance(sec_kw, list) or len(sec_kw) < 2:
-        errors.append("secondary_keywords must have >= 2 items")
+    selected_kws = parse_selected_keywords(user_msg)
+    min_sec = 1 if selected_kws else 2
+    if not isinstance(sec_kw, list) or len(sec_kw) < min_sec:
+        errors.append(f"secondary_keywords must have >= {min_sec} items")
+
+    # Multi-keyword coverage check
+    if selected_kws and not errors:
+        sel_norm = {k.lower() for k in selected_kws}
+        pk_norm = obj["primary_keyword"].strip().lower()
+        sec_norm = {str(s).strip().lower() for s in sec_kw}
+        if pk_norm not in sel_norm:
+            errors.append(f"multi_bulk primary_keyword '{pk_norm}' not in selected keywords")
+        missing = sel_norm - ({pk_norm} | sec_norm)
+        if missing:
+            errors.append(f"multi_bulk missing selected keywords: {missing}")
 
     talking_pts = obj.get("key_talking_points", [])
     if not isinstance(talking_pts, list) or len(talking_pts) < 3:
@@ -123,9 +165,25 @@ def dedup_key_kw(obj: dict) -> str:
     return hashlib.md5("|".join(sorted(kws)).encode()).hexdigest()
 
 
-def dedup_key_cb(obj: dict) -> str:
-    pk = str(obj.get("primary_keyword", "")).lower().strip()
-    return hashlib.md5(pk.encode()).hexdigest()
+def dedup_key_cb(obj: dict, user_msg: str) -> str:
+    selected = parse_selected_keywords(user_msg)
+    if selected:
+        sig = "multi:" + "|".join(sorted(k.lower() for k in selected))
+    else:
+        sig = "single:" + str(obj.get("primary_keyword", "")).lower().strip()
+    return hashlib.md5(sig.encode()).hexdigest()
+
+
+def detect_ctx_combo(user_msg: str) -> str:
+    has_biz = "Business description:" in user_msg
+    has_cust = "Target customer:" in user_msg
+    if has_biz and has_cust:
+        return "both"
+    if has_biz:
+        return "biz_only"
+    if has_cust:
+        return "cust_only"
+    return "none"
 
 
 def process(task: str, inp: Path, out: Path) -> int:
@@ -133,6 +191,9 @@ def process(task: str, inp: Path, out: Path) -> int:
     good, bad = [], []
     lang_counts = Counter()
     intent_counts = Counter()
+    ctx_counts = Counter()
+    mode_counts = Counter()
+    niche_counts = Counter()
 
     if not inp.exists():
         print(f"[WARN] Input file not found: {inp}")
@@ -173,8 +234,8 @@ def process(task: str, inp: Path, out: Path) -> int:
             errors = validate_kw_response(obj, is_vi)
             dk = dedup_key_kw(obj)
         else:
-            errors = validate_cb_response(obj, is_vi)
-            dk = dedup_key_cb(obj)
+            errors = validate_cb_response(obj, user_msg, is_vi)
+            dk = dedup_key_cb(obj, user_msg)
 
         if errors:
             bad.append((lineno, "; ".join(errors)))
@@ -186,10 +247,21 @@ def process(task: str, inp: Path, out: Path) -> int:
         seen_hashes.add(dk)
 
         lang_counts["vi" if is_vi else "en"] += 1
+        ctx_counts[detect_ctx_combo(user_msg)] += 1
+        niche_counts["has_niche" if "Niche:" in user_msg else "no_niche"] += 1
+
         if task == "KEYWORD_RESEARCH":
+            niche_line = next((l for l in user_msg.splitlines() if l.startswith("Niche:")), "")
+            mode_counts["multi_topic" if "," in niche_line else "single_topic"] += 1
             for it in obj.get("keywords", []):
                 intent_counts[it.get("intent", "?")] += 1
         else:
+            if "Selected keywords:" in user_msg:
+                mode_counts["multi_bulk"] += 1
+            elif "Known intent:" in user_msg:
+                mode_counts["single_known"] += 1
+            else:
+                mode_counts["single_free"] += 1
             intent_counts[obj.get("dominant_intent", "?")] += 1
 
         clean = {k: v for k, v in record.items() if k != "_meta"}
@@ -201,8 +273,11 @@ def process(task: str, inp: Path, out: Path) -> int:
             f.write(json.dumps(s, ensure_ascii=False) + "\n")
 
     print(f"[SUCCESS] Valid samples: {len(good)} (EN: {lang_counts['en']}, VI: {lang_counts['vi']})")
-    print(f"[INFO] Intent distribution: {dict(intent_counts)}")
-    print(f"[INFO] Dropped samples: {len(bad)}")
+    print(f"[INFO] Modes:   {dict(mode_counts)}")
+    print(f"[INFO] Context: {dict(ctx_counts)}")
+    print(f"[INFO] Niche:   {dict(niche_counts)}")
+    print(f"[INFO] Intents: {dict(intent_counts)}")
+    print(f"[INFO] Dropped: {len(bad)}")
     if bad:
         print("[INFO] First 5 validation failures:")
         for lineno, msg in bad[:5]:
@@ -225,11 +300,11 @@ if __name__ == "__main__":
         n_kw = process("KEYWORD_RESEARCH", inp / "keyword_research_raw.jsonl", out / "keyword_research.jsonl")
         n_cb = process("CONTENT_BRIEF", inp / "content_brief_raw.jsonl", out / "content_brief.jsonl")
         total = n_kw + n_cb
-        print(f"\n[SUMMARY] Total clean v2 samples: {total} (KW: {n_kw}, CB: {n_cb})")
-        if total >= 2000:
-            print(f"[SUCCESS] High-purity Dataset v2 ready for QLoRA training ({total} samples)!")
+        print(f"\n[SUMMARY] Total clean v2.1 samples: {total} (KW: {n_kw}, CB: {n_cb})")
+        if total >= 2200:
+            print(f"[SUCCESS] High-purity full-coverage Dataset ready for QLoRA training ({total} samples)!")
         else:
-            print(f"[WARN] Collected {total} samples (recommended >= 2000).")
+            print(f"[WARN] Collected {total} samples (target: ~2400).")
     elif args.task == "KEYWORD_RESEARCH":
         f_inp = inp if inp.suffix == ".jsonl" else inp / "keyword_research_raw.jsonl"
         f_out = out if out.suffix == ".jsonl" else out / "keyword_research.jsonl"

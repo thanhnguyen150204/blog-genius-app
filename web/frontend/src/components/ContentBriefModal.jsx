@@ -57,16 +57,7 @@ export function ContentBriefModal({ open, onClose, brief, onUseInStudio, loading
     <Modal
       open={open}
       onClose={onClose}
-      title={
-        <InlineStack gap="200" blockAlign="center">
-          <Text variant="headingMd" as="h2">
-            SEO & GEO Content Brief
-          </Text>
-          {brief.source === "qlora" && (
-            <Badge tone="magic">Fine-tuned QLoRA</Badge>
-          )}
-        </InlineStack>
-      }
+      title="SEO & GEO Content Brief"
       primaryAction={{
         content: "Use in Content Studio",
         icon: ExternalIcon,
@@ -100,7 +91,10 @@ export function ContentBriefModal({ open, onClose, brief, onUseInStudio, loading
                     {brief.primary_keyword}
                   </Text>
                 </BlockStack>
-                <InlineStack gap="200">
+                <InlineStack gap="200" blockAlign="center">
+                  {brief.source === "qlora" && (
+                    <Badge tone="magic">Fine-tuned QLoRA</Badge>
+                  )}
                   <Badge tone={getIntentTone(brief.dominant_intent)}>
                     {brief.dominant_intent || "Informational"} Intent
                   </Badge>
@@ -110,7 +104,7 @@ export function ContentBriefModal({ open, onClose, brief, onUseInStudio, loading
                 </InlineStack>
               </InlineStack>
 
-              {brief.secondary_keywords?.length > 0 && (
+              {Array.isArray(brief.secondary_keywords) && brief.secondary_keywords.length > 0 && (
                 <BlockStack gap="150">
                   <Text variant="bodySm" fontWeight="semibold" tone="subdued">
                     Secondary Keywords:
@@ -118,7 +112,7 @@ export function ContentBriefModal({ open, onClose, brief, onUseInStudio, loading
                   <InlineStack gap="150" wrap>
                     {brief.secondary_keywords.map((sec, idx) => (
                       <Badge key={idx} tone="info">
-                        {sec}
+                        {typeof sec === "string" ? sec : sec?.keyword || String(sec)}
                       </Badge>
                     ))}
                   </InlineStack>
@@ -166,7 +160,7 @@ export function ContentBriefModal({ open, onClose, brief, onUseInStudio, loading
           </Card>
 
           {/* Key Talking Points (E-E-A-T) */}
-          {brief.key_talking_points?.length > 0 && (
+          {Array.isArray(brief.key_talking_points) && brief.key_talking_points.length > 0 && (
             <Card>
               <BlockStack gap="200">
                 <InlineStack align="space-between" blockAlign="center">
@@ -178,7 +172,7 @@ export function ContentBriefModal({ open, onClose, brief, onUseInStudio, loading
                 <List type="bullet">
                   {brief.key_talking_points.map((point, idx) => (
                     <List.Item key={idx}>
-                      <Text variant="bodyMd">{point}</Text>
+                      <Text variant="bodyMd">{typeof point === "string" ? point : JSON.stringify(point)}</Text>
                     </List.Item>
                   ))}
                 </List>
@@ -224,7 +218,7 @@ export function ContentBriefModal({ open, onClose, brief, onUseInStudio, loading
                   </Box>
                 )}
 
-                {brief.geo_blueprint.faq_questions?.length > 0 && (
+                {Array.isArray(brief.geo_blueprint.faq_questions) && brief.geo_blueprint.faq_questions.length > 0 && (
                   <BlockStack gap="150">
                     <Text variant="bodySm" fontWeight="semibold" tone="subdued">
                       FAQ Questions for Schema Markup:
@@ -232,7 +226,7 @@ export function ContentBriefModal({ open, onClose, brief, onUseInStudio, loading
                     <List type="number">
                       {brief.geo_blueprint.faq_questions.map((faq, idx) => (
                         <List.Item key={idx}>
-                          <Text variant="bodyMd">{faq}</Text>
+                          <Text variant="bodyMd">{typeof faq === "string" ? faq : JSON.stringify(faq)}</Text>
                         </List.Item>
                       ))}
                     </List>

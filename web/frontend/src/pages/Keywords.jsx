@@ -238,6 +238,8 @@ export default function Keywords() {
           seed_keyword: effectiveTopics[0],
           language: langCode,
           count: 12,
+          business_desc: businessDesc.trim() || undefined,
+          target_customer: targetCustomer.trim() || undefined,
         }),
       });
 
@@ -263,6 +265,26 @@ export default function Keywords() {
     }
   };
 
+  const pollBriefJob = async (jobId, maxWaitMs = 360000) => {
+    const startTime = Date.now();
+    while (Date.now() - startTime < maxWaitMs) {
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      try {
+        const statusRes = await fetch(`/api/ai/research/brief/status/${jobId}`);
+        if (!statusRes.ok) continue;
+        const statusResult = await statusRes.json();
+        if (statusResult.status === "completed" && statusResult.data) {
+          return statusResult.data;
+        } else if (statusResult.status === "failed") {
+          throw new Error(statusResult.error || "Generation failed");
+        }
+      } catch (pollErr) {
+        console.warn("[AnalyzeBrief] Polling attempt error, will retry:", pollErr);
+      }
+    }
+    throw new Error("Brief generation timed out after 6 minutes. Please try again.");
+  };
+
   const handleAnalyzeBrief = async (kwItem) => {
     const kw = getKwString(kwItem);
     const knownIntent = getKwIntent(kwItem);
@@ -279,16 +301,29 @@ export default function Keywords() {
           niche: topics.length > 0 ? topics.join(", ") : undefined,
           known_intent: knownIntent,
           language: langCode,
+          business_desc: businessDesc.trim() || undefined,
+          target_customer: targetCustomer.trim() || undefined,
         }),
       });
       const result = await res.json();
-      if (result.success && result.data) {
-        setActiveBrief(result.data);
+      console.log("[AnalyzeBrief] API Response:", result);
+
+      let briefData = null;
+      if (result.success && result.data && result.status !== "processing") {
+        briefData = result.data;
+      } else if (result.success && result.jobId) {
+        briefData = await pollBriefJob(result.jobId);
+      }
+
+      if (briefData) {
+        setActiveBrief(briefData);
         setIsBriefModalOpen(true);
       } else {
+        console.warn("[AnalyzeBrief] Failed or missing data:", result);
         shopify.toast?.show("Unable to analyze brief. Please try again.");
       }
     } catch (err) {
+      console.error("[AnalyzeBrief] Network/JSON Error:", err);
       shopify.toast?.show("Error: " + err.message);
     } finally {
       setIsAnalyzingBrief(false);
@@ -297,11 +332,27 @@ export default function Keywords() {
   };
 
   const handleUseBriefInStudio = (brief) => {
-    if (brief?.primary_keyword) {
-      addSavedKeyword(brief.primary_keyword);
+    const kwsToSave = [];
+    if (brief?.primary_keyword) kwsToSave.push(brief.primary_keyword);
+    if (Array.isArray(brief?.secondary_keywords)) {
+      brief.secondary_keywords.forEach((sk) => {
+        if (sk && typeof sk === "string") kwsToSave.push(sk);
+      });
     }
+    if (kwsToSave.length > 0) {
+      addSavedKeywords(kwsToSave);
+    }
+    const studioLang = language.startsWith("vi") ? "Vietnamese" : "English(US)";
     setIsBriefModalOpen(false);
-    navigate("/studio", { state: { brief } });
+    navigate("/studio", {
+      state: {
+        brief: {
+          ...brief,
+          language: studioLang,
+          business_desc: businessDesc.trim() || brief?.business_desc || "",
+        },
+      },
+    });
   };
 
   const handleAddKeyword = (kwItem) => {
@@ -339,11 +390,62 @@ export default function Keywords() {
     shopify.toast?.show(`Added ${listToAdd.length} keywords to saved list!`);
   };
 
-  const handleAnalyzeSelectedBrief = () => {
-    const firstSelected = Array.from(selectedKws)[0];
-    if (firstSelected) {
-      const item = suggestedList.find((k) => getKwString(k) === firstSelected) || firstSelected;
+  const handleAnalyzeSelectedBrief = async () => {
+    const selectedArr = Array.from(selectedKws);
+    if (selectedArr.length === 0) return;
+
+    if (selectedArr.length === 1) {
+      const item = suggestedList.find((k) => getKwString(k) === selectedArr[0]) || selectedArr[0];
       handleAnalyzeBrief(item);
+      return;
+    }
+
+    const selectedItems = selectedArr.map((kwStr) => {
+      const matched = suggestedList.find((k) => getKwString(k) === kwStr);
+      return {
+        keyword: kwStr,
+        intent: matched ? getKwIntent(matched) : undefined,
+      };
+    });
+
+    setAnalyzingKw("__bulk__");
+    setIsAnalyzingBrief(true);
+    try {
+      const langCode = language.startsWith("vi") ? "vi" : "en";
+      const res = await fetch("/api/ai/research/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          selected_keywords: selectedItems,
+          niche: topics.length > 0 ? topics.join(", ") : undefined,
+          language: langCode,
+          business_desc: businessDesc.trim() || undefined,
+          target_customer: targetCustomer.trim() || undefined,
+        }),
+      });
+      const result = await res.json();
+      console.log("[AnalyzeSelectedBrief] API Response:", result);
+
+      let briefData = null;
+      if (result.success && result.data && result.status !== "processing") {
+        briefData = result.data;
+      } else if (result.success && result.jobId) {
+        briefData = await pollBriefJob(result.jobId);
+      }
+
+      if (briefData) {
+        setActiveBrief(briefData);
+        setIsBriefModalOpen(true);
+      } else {
+        console.warn("[AnalyzeSelectedBrief] Failed or missing data:", result);
+        shopify.toast?.show("Unable to analyze bulk brief. Please try again.");
+      }
+    } catch (err) {
+      console.error("[AnalyzeSelectedBrief] Network/JSON Error:", err);
+      shopify.toast?.show("Error: " + err.message);
+    } finally {
+      setIsAnalyzingBrief(false);
+      setAnalyzingKw(null);
     }
   };
 

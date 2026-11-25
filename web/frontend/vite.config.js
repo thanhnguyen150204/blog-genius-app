@@ -50,6 +50,8 @@ export default defineConfig({
         target: `http://127.0.0.1:${process.env.BACKEND_PORT || 3001}`,
         changeOrigin: false,
         secure: false,
+        timeout: 300000,
+        proxyTimeout: 300000,
       },
     },
   },
