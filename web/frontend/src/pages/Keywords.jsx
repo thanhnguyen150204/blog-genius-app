@@ -124,8 +124,8 @@ export default function Keywords() {
   const shopify = useAppBridge();
   const navigate = useNavigate();
 
-  // Banner State
-  const [showPasswordBanner, setShowPasswordBanner] = useState(true);
+  // Banner State (unused - reserved for future use)
+  // const [showPasswordBanner, setShowPasswordBanner] = useState(true);
 
   // Form State
   const [language, setLanguage] = useState("en-US");
@@ -267,8 +267,16 @@ export default function Keywords() {
 
   const pollBriefJob = async (jobId, maxWaitMs = 360000) => {
     const startTime = Date.now();
+    // Exponential backoff: 2.5s → 5s (after 30s) → 8s (after 2min) — reduces backend load
+    const getInterval = (elapsed) => {
+      if (elapsed < 30000) return 2500;
+      if (elapsed < 120000) return 5000;
+      return 8000;
+    };
+
     while (Date.now() - startTime < maxWaitMs) {
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+      const elapsed = Date.now() - startTime;
+      await new Promise((resolve) => setTimeout(resolve, getInterval(elapsed)));
       try {
         const statusRes = await fetch(`/api/ai/research/brief/status/${jobId}`);
         if (!statusRes.ok) continue;
@@ -279,6 +287,9 @@ export default function Keywords() {
           throw new Error(statusResult.error || "Generation failed");
         }
       } catch (pollErr) {
+        if (pollErr.message && !pollErr.message.includes("fetch")) {
+          throw pollErr; // Re-throw real errors (failed status), not network blips
+        }
         console.warn("[AnalyzeBrief] Polling attempt error, will retry:", pollErr);
       }
     }

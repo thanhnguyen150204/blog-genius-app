@@ -75,15 +75,27 @@ async function executeBriefGeneration(jobId, cacheKey, payload, kw, intent, clea
       console.log(`[BriefJob] Job ${jobId} completed successfully via AI microservice.`);
       return;
     }
+    // Non-OK HTTP response from AI service → fall through to fallback
+    console.warn(`[BriefJob] AI Microservice returned HTTP ${response.status} for job ${jobId}.`);
   } catch (aiErr) {
     console.warn(`[BriefJob] AI Microservice failed for job ${jobId}:`, aiErr.message);
   }
 
-  // Resilient fallback if AI microservice failed or timed out
-  const fallback = buildFallbackBrief(kw, intent, cleanSelected);
-  briefJobs.set(jobId, { status: "completed", data: fallback, createdAt: Date.now() });
-  briefCache.set(cacheKey, fallback);
-  console.log(`[BriefJob] Job ${jobId} completed via resilient fallback.`);
+  try {
+    // Resilient fallback if AI microservice failed or timed out
+    const fallback = buildFallbackBrief(kw, intent, cleanSelected);
+    briefJobs.set(jobId, { status: "completed", data: fallback, createdAt: Date.now() });
+    briefCache.set(cacheKey, fallback);
+    console.log(`[BriefJob] Job ${jobId} completed via resilient fallback.`);
+  } catch (fallbackErr) {
+    // Final safety net: mark job as failed so frontend stops polling
+    briefJobs.set(jobId, {
+      status: "failed",
+      error: "Brief generation failed. Please try again.",
+      createdAt: Date.now(),
+    });
+    console.error(`[BriefJob] Job ${jobId} failed completely:`, fallbackErr.message);
+  }
 }
 
 /**
@@ -285,6 +297,7 @@ router.post("/brief", async (req, res, next) => {
       status: "processing",
       jobId,
       message: "Brief generation in progress",
+      estimatedWaitMs: 180000, // ~180s average for CPU inference on Qwen2.5-1.5B
     });
   } catch (err) {
     next(err);
