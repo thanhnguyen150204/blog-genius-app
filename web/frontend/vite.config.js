@@ -24,6 +24,9 @@ if (process.env.HOST && process.env.HOST !== "localhost") {
   hmrConfig = undefined;
 }
 
+const backendPort = process.env.BACKEND_PORT || "3001";
+const proxyTarget = `http://127.0.0.1:${backendPort}`;
+
 export default defineConfig({
   root: "./",
   plugins: [
@@ -48,7 +51,12 @@ export default defineConfig({
     port: parseInt(process.env.FRONTEND_PORT) || 8002,
     hmr: hmrConfig,
     proxy: {
-      "^/api(/|(\\?.*)?$)": "http://localhost:3001",
+      "^/api(/|(\\?.*)?$)": {
+        target: proxyTarget,
+        changeOrigin: false,
+        secure: true,
+        ws: false,
+      },
     },
   },
 });
