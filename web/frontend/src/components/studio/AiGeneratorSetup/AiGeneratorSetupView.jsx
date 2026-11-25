@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BlockStack,
   InlineStack,
@@ -18,7 +18,7 @@ import { PostTitleAndOutlineSettings } from "./PostTitleAndOutlineSettings";
 import { getSavedKeywords } from "../../../utils/savedKeywordsStorage";
 import { ProductPicker, CollectionPicker } from "../../common";
 
-export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
+export function AiGeneratorSetupView({ onBack, onCompleteGeneration, initialBrief }) {
   const [language, setLanguage] = useState("English(US)");
   const [writingStyle, setWritingStyle] = useState("Default");
   const [voiceTone, setVoiceTone] = useState("Default");
@@ -48,6 +48,39 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
 
   const [errors, setErrors] = useState({ keywords: false, title: false });
+
+  // Auto pre-fill from Content Brief when navigated from Keywords page (Module 1 -> Module 2)
+  useEffect(() => {
+    if (initialBrief) {
+      if (initialBrief.language) {
+        const isVi = String(initialBrief.language).toLowerCase().startsWith("vi");
+        setLanguage(isVi ? "Vietnamese" : "English(US)");
+      }
+      if (initialBrief.primary_keyword) {
+        const kws = [
+          initialBrief.primary_keyword,
+          ...(initialBrief.secondary_keywords || []),
+        ];
+        setKeywords(kws);
+        setErrors((prev) => ({ ...prev, keywords: false }));
+      }
+      if (initialBrief.business_desc) {
+        setBusinessDesc(initialBrief.business_desc);
+      }
+      if (initialBrief.target_audience) {
+        setTargetCustomer(initialBrief.target_audience);
+      }
+      if (initialBrief.geo_blueprint?.answer_block_focus) {
+        setInsertSectionSummary(true);
+      }
+      if (initialBrief.recommended_style) {
+        setWritingStyle(initialBrief.recommended_style);
+      }
+      if (initialBrief.recommended_tone) {
+        setVoiceTone(initialBrief.recommended_tone);
+      }
+    }
+  }, [initialBrief]);
 
   const handleKeywordsChange = (newKeywords) => {
     setKeywords(newKeywords);
@@ -178,8 +211,8 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
           brief: {
             keyword: title.trim(),
             secondary_keywords: Array.isArray(keywords) ? keywords : [keywords],
-            target_audience: targetCustomer || "General Readers",
-            tone_of_voice: voiceTone || "Professional & Informative",
+            target_audience: targetCustomer || initialBrief?.target_audience || "General Readers",
+            tone_of_voice: voiceTone || initialBrief?.recommended_tone || "Professional & Informative",
           },
           outline: parsedSections,
         }),
@@ -205,8 +238,8 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration }) {
         mode: "ai",
         isAiGenerated: true,
         creationMode: "ai",
-        intent: "Informational",
-        type: "Informational",
+        intent: initialBrief?.dominant_intent || "Informational",
+        type: initialBrief?.recommended_content_type || "Informational",
         author: "AI Assistant",
         lastModified: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
         isNew: true,

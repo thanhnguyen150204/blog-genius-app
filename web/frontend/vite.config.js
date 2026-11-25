@@ -54,7 +54,9 @@ export default defineConfig({
       "^/api(/|(\\?.*)?$)": {
         target: proxyTarget,
         changeOrigin: false,
-        secure: true,
+        secure: false,
+        timeout: 300000,
+        proxyTimeout: 300000,
         ws: false,
       },
     },

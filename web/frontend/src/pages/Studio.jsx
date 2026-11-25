@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Page,
   BlockStack,
@@ -25,9 +26,17 @@ import { initialStudioPosts } from "../mock/studioData";
 
 export default function Studio() {
   const shopify = useAppBridge();
+  const location = useLocation();
+  const incomingBrief = location.state?.brief;
 
   // Navigation / view mode: 'list' | 'ai-setup' | 'scratch-builder'
-  const [viewMode, setViewMode] = useState("list");
+  const [viewMode, setViewMode] = useState(incomingBrief ? "ai-setup" : "list");
+
+  useEffect(() => {
+    if (incomingBrief) {
+      setViewMode("ai-setup");
+    }
+  }, [incomingBrief]);
 
   const [posts, setPosts] = useState(initialStudioPosts);
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -384,6 +393,7 @@ export default function Studio() {
     return (
       <Page>
         <AiGeneratorSetupView
+          initialBrief={incomingBrief}
           onBack={() => setViewMode("list")}
           onCompleteGeneration={handleCompleteAiGeneration}
         />

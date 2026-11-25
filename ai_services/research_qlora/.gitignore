@@ -1,0 +1,24 @@
+# Dataset files (large)
+data/raw/*.jsonl
+data/*.jsonl
+!data/.gitkeep
+
+# Model checkpoints
+training/checkpoints/
+training/outputs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Env
+.env
+*.env
+
+# Colab outputs
+*.ipynb_checkpoints/
+

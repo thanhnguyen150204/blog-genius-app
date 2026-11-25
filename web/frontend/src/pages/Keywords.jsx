@@ -8,6 +8,7 @@ import {
   Tag,
   Icon,
   Checkbox,
+  Badge,
 } from "@shopify/polaris";
 import {
   MagicIcon,
@@ -17,6 +18,7 @@ import {
 } from "@shopify/polaris-icons";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useNavigate } from "react-router-dom";
+import { ContentBriefModal } from "../components/ContentBriefModal";
 import {
   getSavedKeywords,
   addSavedKeyword,
@@ -122,8 +124,8 @@ export default function Keywords() {
   const shopify = useAppBridge();
   const navigate = useNavigate();
 
-  // Banner State
-  const [showPasswordBanner, setShowPasswordBanner] = useState(true);
+  // Banner State (unused - reserved for future use)
+  // const [showPasswordBanner, setShowPasswordBanner] = useState(true);
 
   // Form State
   const [language, setLanguage] = useState("en-US");
@@ -146,6 +148,29 @@ export default function Keywords() {
 
   // Saved keywords tracker
   const [savedKws, setSavedKws] = useState(getSavedKeywords);
+
+  // Content Brief Modal State
+  const [activeBrief, setActiveBrief] = useState(null);
+  const [isBriefModalOpen, setIsBriefModalOpen] = useState(false);
+  const [isAnalyzingBrief, setIsAnalyzingBrief] = useState(false);
+  const [analyzingKw, setAnalyzingKw] = useState(null);
+
+  const getKwString = (item) => (typeof item === "string" ? item : item.keyword);
+  const getKwIntent = (item) => (typeof item === "string" ? "Informational" : item.intent || "Informational");
+  const getIntentTone = (intent) => {
+    switch (intent?.toLowerCase()) {
+      case "transactional":
+        return "success";
+      case "commercial":
+        return "magic";
+      case "informational":
+        return "info";
+      case "navigational":
+        return "warning";
+      default:
+        return "subdued";
+    }
+  };
 
   useEffect(() => {
     const handleStorageUpdate = (e) => {
@@ -186,7 +211,7 @@ export default function Keywords() {
     setTopicError(false);
   };
 
-  const handleGenerateKeywords = () => {
+  const handleGenerateKeywords = async () => {
     const trimmed = topicInput.trim();
     const effectiveTopics = [...topics];
     if (trimmed && !effectiveTopics.includes(trimmed)) {
@@ -202,21 +227,153 @@ export default function Keywords() {
 
     setTopicError(false);
     setIsGenerating(true);
-    setTimeout(() => {
+
+    try {
+      const langCode = language.startsWith("vi") ? "vi" : "en";
+      const response = await fetch("/api/ai/research/keywords", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          niche: effectiveTopics.join(", "),
+          seed_keyword: effectiveTopics[0],
+          language: langCode,
+          count: 12,
+          business_desc: businessDesc.trim() || undefined,
+          target_customer: targetCustomer.trim() || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data?.keywords?.length > 0) {
+          setSuggestedList(result.data.keywords);
+          setIsGenerating(false);
+          setHasGenerated(true);
+          setSelectedKws(new Set());
+          return;
+        }
+      }
+      throw new Error("Fallback required");
+    } catch {
+      // Resilient fallback to mock keywords
       const generated = generateKeywordsForTopics(effectiveTopics);
-      setSuggestedList(generated);
+      setSuggestedList(generated.map((k) => ({ keyword: k, intent: "Informational" })));
+    } finally {
       setIsGenerating(false);
       setHasGenerated(true);
       setSelectedKws(new Set());
-    }, 600);
+    }
   };
 
-  const handleAddKeyword = (kw) => {
+  const pollBriefJob = async (jobId, maxWaitMs = 360000) => {
+    const startTime = Date.now();
+    // Exponential backoff: 2.5s → 5s (after 30s) → 8s (after 2min) — reduces backend load
+    const getInterval = (elapsed) => {
+      if (elapsed < 30000) return 2500;
+      if (elapsed < 120000) return 5000;
+      return 8000;
+    };
+
+    while (Date.now() - startTime < maxWaitMs) {
+      const elapsed = Date.now() - startTime;
+      await new Promise((resolve) => setTimeout(resolve, getInterval(elapsed)));
+      try {
+        const statusRes = await fetch(`/api/ai/research/brief/status/${jobId}`);
+        if (!statusRes.ok) continue;
+        const statusResult = await statusRes.json();
+        if (statusResult.status === "completed" && statusResult.data) {
+          return statusResult.data;
+        } else if (statusResult.status === "failed") {
+          throw new Error(statusResult.error || "Generation failed");
+        }
+      } catch (pollErr) {
+        if (pollErr.message && !pollErr.message.includes("fetch")) {
+          throw pollErr; // Re-throw real errors (failed status), not network blips
+        }
+        console.warn("[AnalyzeBrief] Polling attempt error, will retry:", pollErr);
+      }
+    }
+    throw new Error("Brief generation timed out after 6 minutes. Please try again.");
+  };
+
+  const handleAnalyzeBrief = async (kwItem) => {
+    const kw = getKwString(kwItem);
+    const knownIntent = getKwIntent(kwItem);
+
+    setAnalyzingKw(kw);
+    setIsAnalyzingBrief(true);
+    try {
+      const langCode = language.startsWith("vi") ? "vi" : "en";
+      const res = await fetch("/api/ai/research/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          primary_keyword: kw,
+          niche: topics.length > 0 ? topics.join(", ") : undefined,
+          known_intent: knownIntent,
+          language: langCode,
+          business_desc: businessDesc.trim() || undefined,
+          target_customer: targetCustomer.trim() || undefined,
+        }),
+      });
+      const result = await res.json();
+      console.log("[AnalyzeBrief] API Response:", result);
+
+      let briefData = null;
+      if (result.success && result.data && result.status !== "processing") {
+        briefData = result.data;
+      } else if (result.success && result.jobId) {
+        briefData = await pollBriefJob(result.jobId);
+      }
+
+      if (briefData) {
+        setActiveBrief(briefData);
+        setIsBriefModalOpen(true);
+      } else {
+        console.warn("[AnalyzeBrief] Failed or missing data:", result);
+        shopify.toast?.show("Unable to analyze brief. Please try again.");
+      }
+    } catch (err) {
+      console.error("[AnalyzeBrief] Network/JSON Error:", err);
+      shopify.toast?.show("Error: " + err.message);
+    } finally {
+      setIsAnalyzingBrief(false);
+      setAnalyzingKw(null);
+    }
+  };
+
+  const handleUseBriefInStudio = (brief) => {
+    const kwsToSave = [];
+    if (brief?.primary_keyword) kwsToSave.push(brief.primary_keyword);
+    if (Array.isArray(brief?.secondary_keywords)) {
+      brief.secondary_keywords.forEach((sk) => {
+        if (sk && typeof sk === "string") kwsToSave.push(sk);
+      });
+    }
+    if (kwsToSave.length > 0) {
+      addSavedKeywords(kwsToSave);
+    }
+    const studioLang = language.startsWith("vi") ? "Vietnamese" : "English(US)";
+    setIsBriefModalOpen(false);
+    navigate("/studio", {
+      state: {
+        brief: {
+          ...brief,
+          language: studioLang,
+          business_desc: businessDesc.trim() || brief?.business_desc || "",
+        },
+      },
+    });
+  };
+
+  const handleAddKeyword = (kwItem) => {
+    const kw = getKwString(kwItem);
     addSavedKeyword(kw);
     shopify.toast?.show(`Added "${kw}" to saved keywords!`);
   };
 
-  const handleToggleSelectRow = (kw) => {
+  const handleToggleSelectRow = (kwItem) => {
+    const kw = getKwString(kwItem);
     setSelectedKws((prev) => {
       const next = new Set(prev);
       if (next.has(kw)) {
@@ -229,10 +386,11 @@ export default function Keywords() {
   };
 
   const handleToggleSelectAll = () => {
+    const allKwStrings = suggestedList.map(getKwString);
     if (selectedKws.size === suggestedList.length) {
       setSelectedKws(new Set());
     } else {
-      setSelectedKws(new Set(suggestedList));
+      setSelectedKws(new Set(allKwStrings));
     }
   };
 
@@ -241,6 +399,65 @@ export default function Keywords() {
     if (listToAdd.length === 0) return;
     addSavedKeywords(listToAdd);
     shopify.toast?.show(`Added ${listToAdd.length} keywords to saved list!`);
+  };
+
+  const handleAnalyzeSelectedBrief = async () => {
+    const selectedArr = Array.from(selectedKws);
+    if (selectedArr.length === 0) return;
+
+    if (selectedArr.length === 1) {
+      const item = suggestedList.find((k) => getKwString(k) === selectedArr[0]) || selectedArr[0];
+      handleAnalyzeBrief(item);
+      return;
+    }
+
+    const selectedItems = selectedArr.map((kwStr) => {
+      const matched = suggestedList.find((k) => getKwString(k) === kwStr);
+      return {
+        keyword: kwStr,
+        intent: matched ? getKwIntent(matched) : undefined,
+      };
+    });
+
+    setAnalyzingKw("__bulk__");
+    setIsAnalyzingBrief(true);
+    try {
+      const langCode = language.startsWith("vi") ? "vi" : "en";
+      const res = await fetch("/api/ai/research/brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          selected_keywords: selectedItems,
+          niche: topics.length > 0 ? topics.join(", ") : undefined,
+          language: langCode,
+          business_desc: businessDesc.trim() || undefined,
+          target_customer: targetCustomer.trim() || undefined,
+        }),
+      });
+      const result = await res.json();
+      console.log("[AnalyzeSelectedBrief] API Response:", result);
+
+      let briefData = null;
+      if (result.success && result.data && result.status !== "processing") {
+        briefData = result.data;
+      } else if (result.success && result.jobId) {
+        briefData = await pollBriefJob(result.jobId);
+      }
+
+      if (briefData) {
+        setActiveBrief(briefData);
+        setIsBriefModalOpen(true);
+      } else {
+        console.warn("[AnalyzeSelectedBrief] Failed or missing data:", result);
+        shopify.toast?.show("Unable to analyze bulk brief. Please try again.");
+      }
+    } catch (err) {
+      console.error("[AnalyzeSelectedBrief] Network/JSON Error:", err);
+      shopify.toast?.show("Error: " + err.message);
+    } finally {
+      setIsAnalyzingBrief(false);
+      setAnalyzingKw(null);
+    }
   };
 
   const isAllSelected =
@@ -628,9 +845,19 @@ export default function Keywords() {
                 <span style={{ fontSize: "13px", fontWeight: 600, color: "#005bd3" }}>
                   {selectedKws.size} keyword(s) selected
                 </span>
-                <Button size="slim" variant="primary" onClick={handleAddSelectedKeywords}>
-                  Add selected keywords ({selectedKws.size})
-                </Button>
+                <InlineStack gap="200">
+                  <Button
+                    size="slim"
+                    icon={MagicIcon}
+                    onClick={handleAnalyzeSelectedBrief}
+                    loading={isAnalyzingBrief}
+                  >
+                    Analyze Brief
+                  </Button>
+                  <Button size="slim" variant="primary" onClick={handleAddSelectedKeywords}>
+                    Add selected keywords ({selectedKws.size})
+                  </Button>
+                </InlineStack>
               </div>
             )}
 
@@ -638,7 +865,7 @@ export default function Keywords() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 180px",
+                gridTemplateColumns: "1fr 140px 220px",
                 alignItems: "center",
                 padding: "12px 20px",
                 borderBottom: "1px solid #e1e3e5",
@@ -657,23 +884,27 @@ export default function Keywords() {
                 />
                 <span>Keyword</span>
               </div>
-              <div style={{ textAlign: "right", paddingRight: "8px" }}>Action</div>
+              <div style={{ textAlign: "center" }}>Search Intent</div>
+              <div style={{ textAlign: "right", paddingRight: "8px" }}>Actions</div>
             </div>
 
             {/* Table Rows */}
             <div>
-              {suggestedList.map((kw) => {
+              {suggestedList.map((item, idx) => {
+                const kw = getKwString(item);
+                const intent = getKwIntent(item);
                 const isAdded =
                   isKeywordSaved(kw) ||
                   savedKws.some((s) => s.toLowerCase() === kw.toLowerCase());
                 const isChecked = selectedKws.has(kw);
+                const isThisAnalyzing = isAnalyzingBrief && analyzingKw === kw;
 
                 return (
                   <div
-                    key={kw}
+                    key={`${kw}-${idx}`}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1fr 180px",
+                      gridTemplateColumns: "1fr 140px 220px",
                       alignItems: "center",
                       padding: "12px 20px",
                       borderBottom: "1px solid #f1f2f3",
@@ -692,31 +923,48 @@ export default function Keywords() {
                         label=""
                         labelHidden
                         checked={isChecked}
-                        onChange={() => handleToggleSelectRow(kw)}
+                        onChange={() => handleToggleSelectRow(item)}
                       />
-                      <span style={{ fontSize: "13.5px", color: "#202223", fontWeight: 400 }}>
+                      <span style={{ fontSize: "13.5px", color: "#202223", fontWeight: 500 }}>
                         {kw}
                       </span>
                     </div>
 
-                    <div style={{ textAlign: "right" }}>
+                    <div style={{ textAlign: "center" }}>
+                      <Badge tone={getIntentTone(intent)}>
+                        {intent}
+                      </Badge>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px" }}>
+                      <Button
+                        size="slim"
+                        icon={MagicIcon}
+                        loading={isThisAnalyzing}
+                        onClick={() => handleAnalyzeBrief(item)}
+                      >
+                        Analyze Brief
+                      </Button>
+
                       {isAdded ? (
                         <div
                           style={{
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "6px",
+                            gap: "4px",
                             color: "#108043",
-                            fontSize: "13px",
+                            fontSize: "12.5px",
                             fontWeight: 500,
+                            minWidth: "90px",
+                            justifyContent: "flex-end",
                           }}
                         >
                           <Icon source={CheckCircleIcon} tone="success" />
-                          <span>Keyword added</span>
+                          <span>Added</span>
                         </div>
                       ) : (
-                        <Button size="slim" onClick={() => handleAddKeyword(kw)}>
-                          Add keyword
+                        <Button size="slim" onClick={() => handleAddKeyword(item)}>
+                          Add
                         </Button>
                       )}
                     </div>
@@ -726,6 +974,14 @@ export default function Keywords() {
             </div>
           </div>
         )}
+
+        {/* Content Brief Modal */}
+        <ContentBriefModal
+          open={isBriefModalOpen}
+          onClose={() => setIsBriefModalOpen(false)}
+          brief={activeBrief}
+          onUseInStudio={handleUseBriefInStudio}
+        />
       </BlockStack>
     </div>
   );
