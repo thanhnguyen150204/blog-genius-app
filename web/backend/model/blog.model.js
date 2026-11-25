@@ -16,6 +16,10 @@ const blogSchema = new mongoose.Schema(
     geoScore: { type: Number, default: 0 },
     status: { type: String, enum: ["draft", "published"], default: "draft" },
     aiGenerated: { type: Boolean, default: false },
+    blocks: { type: Array, default: [] },
+    outline: { type: Array, default: [] },
+    author: { type: String, default: "Default (Store Default)" },
+    featuredImage: { type: String, default: null },
   },
   { timestamps: true }
 );

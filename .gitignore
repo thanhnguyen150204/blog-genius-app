@@ -57,3 +57,5 @@ ai_services/research_qlora/serve/adapter/chat_template.jinja
 ai_services/research_qlora/serve/adapter/README.md
 !ai_services/research_qlora/serve/adapter/.gitkeep
 
+# Private study notes & learning guides
+docs/

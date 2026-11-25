@@ -1,273 +1,743 @@
-// Styling specifically scoped for Content Idea module
+// ==========================================================================
+// Content Ideas Module — Anti-Slop High-Taste Engineering (Linear/Vercel)
+// ==========================================================================
+
 .content-ideas-page {
-  padding-bottom: 3rem;
-
-  .content-ideas-scorecard {
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    border-radius: var(--p-border-radius-300, 8px);
-
-    &:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-  }
-
-  .content-ideas-filter-box {
-    background: var(--p-color-bg-surface);
-    border-radius: var(--p-border-radius-300, 8px);
-    border: 1px solid var(--p-color-border-subdued, #e1e3e5);
-    padding: 16px;
-  }
-
-  .filter-preset-active {
-    font-weight: 600;
-  }
-
-  .opportunity-title-cell {
-    max-width: 320px;
-    min-width: 0;
-  }
-
-  .viability-score-card {
-    background: linear-gradient(135deg, rgba(235, 249, 238, 0.6) 0%, rgba(244, 246, 248, 0.8) 100%);
-    border: 1px solid rgba(44, 110, 73, 0.2);
-    border-radius: var(--p-border-radius-300, 8px);
-    padding: 16px;
-  }
-
-  .outline-step-card {
-    background: var(--p-color-bg-surface-secondary, #f6f6f7);
-    border-radius: var(--p-border-radius-200, 6px);
-    padding: 10px 14px;
-    border-left: 3px solid var(--p-color-bg-fill-magic, #8c4bff);
-  }
-
-  .content-gap-banner {
-    background: #fff8e5;
-    border: 1px solid #ffd280;
-    border-radius: var(--p-border-radius-200, 6px);
-    padding: 12px 14px;
-  }
-
-  .ai-snippet-box {
-    background: #f3f5ff;
-    border: 1px solid #c9d5ff;
-    border-radius: var(--p-border-radius-200, 6px);
-    padding: 12px 14px;
-  }
-
-  // Thanh 1: Category Segmented button group (selected switches to solid black with white text)
-  .content-ideas-category-segmented {
-    .Polaris-ButtonGroup {
-      background: #f1f2f4;
-      padding: 3px;
-      border-radius: var(--p-border-radius-200, 6px);
-      border: 1px solid var(--p-color-border-subdued, #e1e3e5);
-      display: inline-flex;
-      gap: 2px;
-    }
-
-    .Polaris-ButtonGroup__Item {
-      display: inline-flex;
-    }
-
-    .Polaris-Button {
-      background: transparent;
-      border: none !important;
-      border-radius: var(--p-border-radius-200, 6px);
-      color: #5c5f62;
-      font-weight: 500;
-      box-shadow: none !important;
-      padding: 6px 14px;
-      transition: all 0.15s ease;
-
-      &:hover {
-        background: #e4e5e7;
-        color: #202223;
-      }
-    }
-
-    .Polaris-Button--pressed,
-    .Polaris-Button[aria-pressed="true"] {
-      background: #202223 !important; // Chuyển màu đen than khi chọn
-      color: #ffffff !important;       // Chữ trắng tuyết
-      border: none !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
-
-      .Polaris-Button__Text,
-      span {
-        color: #ffffff !important;
-        font-weight: 600;
-      }
-
-      .Polaris-Button__Icon svg,
-      svg {
-        fill: #ffffff !important;
-      }
-
-      &:hover {
-        background: #000000 !important;
-        color: #ffffff !important;
-      }
-    }
-  }
-
-  // Thanh 2: Presets Segmented button group (nền trắng tuyệt đối, chỉ đổi màu chữ & icon khi được chọn)
-  .content-ideas-presets-segmented {
-    .Polaris-ButtonGroup {
-      background: #ffffff;
-      border-radius: var(--p-border-radius-200, 6px);
-      display: inline-flex;
-      gap: 0;
-    }
-
-    .Polaris-ButtonGroup__Item {
-      display: inline-flex;
-    }
-
-    .Polaris-Button {
-      background: #ffffff !important; // Luôn giữ nền trắng
-      color: var(--p-color-text-subdued, #6d7175);
-      border: 1px solid var(--p-color-border-subdued, #e1e3e5) !important;
-      font-weight: 400;
-      box-shadow: none !important;
-      padding: 4px 12px;
-      transition: all 0.15s ease;
-
-      .Polaris-Button__Icon svg,
-      svg {
-        fill: currentColor !important;
-      }
-
-      &:hover {
-        background: #f9fafb !important;
-        color: #202223;
-      }
-    }
-
-    .Polaris-Button--pressed,
-    .Polaris-Button[aria-pressed="true"] {
-      background: #ffffff !important; // Giữ nền trắng tuyệt đối (không dùng khối nền màu)
-      border-color: #babfc3 !important;
-      box-shadow: inset 0 -2px 0 0 currentColor, 0 1px 2px rgba(0, 0, 0, 0.05) !important;
-
-      .Polaris-Button__Text,
-      span {
-        font-weight: 600;
-        color: inherit !important; // Màu chữ và icon theo màu của preset (ví dụ màu nâu #b24000)
-      }
-
-      .Polaris-Button__Icon svg,
-      svg {
-        fill: currentColor !important;
-      }
-
-      &:hover {
-        background: #ffffff !important;
-      }
-    }
-  }
+  padding-bottom: 2rem;
 }
 
-// Slide-over Right Drawer and Backdrop
-.content-ideas-drawer-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(24, 24, 27, 0.4);
-  z-index: 500;
-  backdrop-filter: blur(2px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
-
-  &.open {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-.content-ideas-right-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 500px;
-  max-width: 90vw;
-  background: var(--p-color-bg-surface, #ffffff);
-  z-index: 501;
-  box-shadow: -6px 0 28px rgba(0, 0, 0, 0.15);
+// --------------------------------------------------------------------------
+// 1. Header Bar (Clean, Stable, Balanced)
+// --------------------------------------------------------------------------
+.ideas-header-clean {
   display: flex;
-  flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-
-  &.open {
-    transform: translateX(0);
-  }
-
-  .drawer-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--p-color-border-subdued, #e1e3e5);
-    background: var(--p-color-bg-surface, #ffffff);
-  }
-
-  .drawer-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-  }
-
-  .drawer-footer {
-    padding: 16px 20px;
-    border-top: 1px solid var(--p-color-border-subdued, #e1e3e5);
-    background: var(--p-color-bg-surface, #ffffff);
-  }
-}
-
-// Floating tab on right screen edge
-.content-ideas-floating-tab-trigger {
-  position: fixed;
-  top: 48%;
-  right: 0;
-  transform: translateY(-50%);
-  z-index: 490;
-  background: var(--p-color-bg-surface, #ffffff);
-  border: 1px solid var(--p-color-border-subdued, #e1e3e5);
-  border-right: none;
-  border-radius: 8px 0 0 8px;
-  box-shadow: -2px 3px 12px rgba(0, 0, 0, 0.08);
-  padding: 12px 10px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-  user-select: none;
+  gap: 16px;
+  padding-bottom: 4px;
 
-  &:hover {
-    background: var(--p-color-bg-surface-hover, #f6f6f7);
-    padding-right: 14px;
-    box-shadow: -4px 4px 16px rgba(0, 0, 0, 0.14);
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .tab-icon-wrap {
+  .ideas-title-row {
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: var(--p-color-text-magic, #8c4bff);
+    gap: 8px;
+    margin-bottom: 4px;
   }
 
-  .tab-text {
-    font-size: 11px;
+  .ideas-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.025em;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .ideas-badge {
+    font-size: 10px;
     font-weight: 600;
-    color: var(--p-color-text, #202223);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: #0f172a;
+    color: #ffffff;
+  }
+
+  .ideas-subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .ideas-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+}
+
+// --------------------------------------------------------------------------
+// 2. Opportunity Intelligence Banner (Visual & Intuitive, Zero Overlap)
+// --------------------------------------------------------------------------
+.ideas-intelligence-banner {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.35fr;
+  gap: 16px;
+  width: 100%;
+
+  @media (max-width: 1080px) {
+    grid-template-columns: 1fr 1fr;
+
+    .intelligence-visual-card {
+      grid-column: span 2;
+    }
+  }
+
+  @media (max-width: 680px) {
+    grid-template-columns: 1fr;
+
+    .intelligence-visual-card {
+      grid-column: span 1;
+    }
+  }
+}
+
+.intelligence-kpi-card {
+  min-width: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 112px;
+  box-sizing: border-box;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .kpi-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .kpi-metric-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  .kpi-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1.5px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+
+    &.kpi-badge-live {
+      background-color: #ecfdf5;
+      color: #047857;
+    }
+
+    &.kpi-badge-intent {
+      background-color: #fffbeb;
+      color: #b45309;
+    }
+  }
+
+  .kpi-metric-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 6px 0 2px;
+  }
+
+  .kpi-metric-number {
+    font-size: 26px;
+    font-weight: 750;
+    color: #0f172a;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+
+  .kpi-metric-unit {
+    font-size: 11.5px;
+    color: #475569;
+    font-weight: 600;
+  }
+
+  .kpi-metric-meta {
+    font-size: 11px;
+    color: #94a3b8;
+    line-height: 1.3;
     white-space: nowrap;
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    transform: rotate(180deg);
-    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.intelligence-visual-card {
+  min-width: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 112px;
+  box-sizing: border-box;
+
+  .visual-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .visual-card-title {
+    font-size: 13.5px;
+    font-weight: 650;
+    color: #0f172a;
+    display: block;
+  }
+
+  .visual-card-subtitle {
+    font-size: 11.5px;
+    color: #64748b;
+    margin-top: 2px;
+    display: block;
+  }
+
+  .geo-readiness-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    flex-shrink: 0;
+
+    .geo-odds-label {
+      font-size: 10px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .geo-odds-val {
+      font-size: 17px;
+      font-weight: 750;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+  }
+
+  .intent-bar-container {
+    height: 10px;
+    border-radius: 99px;
+    background: #f1f5f9;
+    display: flex;
+    overflow: hidden;
+    gap: 2px;
+    margin: 10px 0 8px;
+
+    .intent-segment {
+      height: 100%;
+      transition: width 0.3s ease;
+
+      &.segment-transactional {
+        background: #10b981;
+        border-radius: 99px 0 0 99px;
+      }
+      &.segment-commercial {
+        background: #f59e0b;
+      }
+      &.segment-informational {
+        background: #6366f1;
+        border-radius: 0 99px 99px 0;
+      }
+    }
+  }
+
+  .intent-legend-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+
+    .legend-item-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 11.5px;
+      color: #475569;
+      transition: color 0.12s ease;
+
+      &:hover {
+        color: #0f172a;
+      }
+
+      .legend-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+
+        &.dot-trans { background: #10b981; }
+        &.dot-comm { background: #f59e0b; }
+        &.dot-info { background: #6366f1; }
+      }
+
+      .legend-label {
+        font-weight: 500;
+      }
+
+      .legend-count {
+        font-weight: 650;
+        color: #0f172a;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+  }
+}
+
+// --------------------------------------------------------------------------
+// 3. Unified Filter Command Panel (Balanced, Zero-Hole Layout)
+// --------------------------------------------------------------------------
+.ideas-filter-panel {
+  width: 100%;
+
+  .Polaris-Card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .filter-panel-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .filter-nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .filter-tab-group {
+    display: flex;
+    gap: 4px;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .filter-tab-pill {
+    border: none;
+    background: transparent;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    &:hover {
+      color: #0f172a;
+    }
+
+    &.active {
+      background: #ffffff;
+      color: #0f172a;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+
+      .tab-count-badge {
+        background: #0f172a;
+        color: #ffffff;
+      }
+    }
+
+    .tab-count-badge {
+      font-size: 10px;
+      font-weight: 600;
+      background: #e2e8f0;
+      color: #475569;
+      padding: 1px 5px;
+      border-radius: 99px;
+      line-height: 1.2;
+    }
+  }
+
+  .filter-preset-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .preset-chip {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.12s ease;
+
+    &:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    &.active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+  }
+
+  .filter-divider {
+    height: 1px;
+    background: #f1f5f9;
+  }
+
+  // Row 2: Search & Balanced Dropdowns in ONE single balanced row (NO holes!)
+  .filter-controls-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+
+    .search-field-wrap {
+      flex: 2;
+      min-width: 260px;
+    }
+
+    .filter-select-wrap {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .filter-clear-wrap {
+      flex-shrink: 0;
+    }
+  }
+}
+
+// --------------------------------------------------------------------------
+// 4. Clean Data Table (No Skittles, Prominent Draft CTA, Tabular Numbers)
+// --------------------------------------------------------------------------
+.ideas-table-container {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 12px;
+  overflow-x: auto;
+
+  .ideas-data-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    text-align: left;
+
+    thead tr {
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      padding: 12px 14px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #64748b;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 14px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+      font-size: 13px;
+    }
+
+    .ideas-table-row {
+      transition: background-color 0.12s ease;
+
+      &:hover {
+        background-color: #f8fafc;
+      }
+    }
+  }
+
+  // Col 1: Topic & Target Product Focus
+  .table-topic-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    .topic-title-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      text-align: left;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #0f172a;
+      line-height: 1.3;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+        color: #1e293b;
+      }
+    }
+
+    .topic-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: #64748b;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .topic-query {
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .meta-sep {
+      color: #cbd5e1;
+    }
+
+    .meta-product {
+      color: #1e293b;
+      font-weight: 500;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+    }
+
+    .meta-engine {
+      background: #eef2ff;
+      color: #4f46e5;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-weight: 600;
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+  }
+
+  // Col 2: Buyer Intent
+  .table-intent-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    .intent-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .intent-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .intent-text {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .funnel-badge {
+      font-size: 10px;
+      font-weight: 600;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    .difficulty-line {
+      font-size: 11px;
+      color: #64748b;
+
+      .diff-val {
+        font-weight: 550;
+
+        &.easy { color: #059669; }
+        &.medium { color: #d97706; }
+        &.hard { color: #dc2626; }
+      }
+    }
+  }
+
+  // Col 3: Volume & Growth
+  .table-volume-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+
+    .vol-num {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .growth-pill {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #047857;
+      background: #ecfdf5;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-variant-numeric: tabular-nums;
+      display: inline-block;
+    }
+  }
+
+  // Col 4: GEO AI Citation Odds with visual bar
+  .table-geo-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+
+    .geo-pct {
+      font-size: 13.5px;
+      font-weight: 750;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .geo-bar-track {
+      width: 54px;
+      height: 4px;
+      background: #e2e8f0;
+      border-radius: 99px;
+      overflow: hidden;
+      margin: 1px 0;
+
+      .geo-bar-fill {
+        height: 100%;
+        border-radius: 99px;
+      }
+    }
+
+    .geo-odds-label {
+      font-size: 10px;
+      color: #64748b;
+      font-weight: 500;
+    }
+  }
+
+  // Col 5: Actions: Bookmark & Solid Obsidian Draft Button
+  .table-action-col {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    white-space: nowrap;
+    padding-right: 4px;
+
+    .bookmark-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 4px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.12s ease;
+
+      &:hover {
+        color: #f59e0b;
+      }
+
+      &.saved {
+        color: #f59e0b;
+      }
+    }
+
+    .draft-action-btn {
+      background: #0f172a;
+      color: #ffffff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.12s ease;
+      flex-shrink: 0;
+
+      &:hover {
+        background: #1e293b;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      svg {
+        width: 13px;
+        height: 13px;
+        fill: currentColor;
+      }
+    }
+  }
+
+  // Footer Pagination
+  .table-footer-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-top: 1px solid #f1f5f9;
+    background: #ffffff;
+
+    .table-count-text {
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .table-pagination-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rows-select-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #64748b;
+    }
   }
 }

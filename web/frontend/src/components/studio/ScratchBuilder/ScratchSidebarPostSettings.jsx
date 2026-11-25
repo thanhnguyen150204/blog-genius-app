@@ -197,10 +197,30 @@ export function ScratchSidebarPostSettings({
     { label: "Custom author...", value: "custom" },
   ];
 
-  const blogOptions = [
+  const [blogOptions, setBlogOptions] = useState([
     { label: "Please select", value: "" },
     { label: "News", value: "News" },
-  ];
+  ]);
+
+  useEffect(() => {
+    const fetchStoreBlogs = async () => {
+      try {
+        const res = await fetch("/api/shop/blogs");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.blogs) && data.blogs.length > 0) {
+            setBlogOptions([
+              { label: "Please select", value: "" },
+              ...data.blogs.map((b) => ({ label: b.title, value: b.title })),
+            ]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load shop blogs via GraphQL:", err);
+      }
+    };
+    fetchStoreBlogs();
+  }, []);
 
   const imageSizeOptions = [
     { label: "Original size", value: "original" },

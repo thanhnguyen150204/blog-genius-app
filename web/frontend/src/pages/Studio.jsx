@@ -55,6 +55,38 @@ export default function Studio() {
     };
   }, []);
 
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        const res = await fetch("/api/blogs");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.blogs) && data.blogs.length > 0) {
+            const mappedPosts = data.blogs.map((b) => ({
+              id: b._id,
+              title: b.title,
+              status: b.status === "published" ? "Published" : "Draft",
+              author: b.author || "Default (Store Default)",
+              keyword: (b.keywords && b.keywords[0]) || "",
+              lastModified: new Date(b.updatedAt || b.createdAt).toLocaleDateString(),
+              bodyHtml: b.content,
+              blocks: b.blocks || [],
+              outline: b.outline || [],
+              seoScore: b.seoScore ?? 85,
+              geoScore: b.geoScore ?? 88,
+              isAiGenerated: b.aiGenerated ?? false,
+            }));
+            setPosts(mappedPosts);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load blogs from MongoDB:", err);
+      }
+    };
+
+    fetchBlogs();
+  }, []);
+
   // Modals state
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [activeDetailPost, setActiveDetailPost] = useState(null);
@@ -226,13 +258,13 @@ export default function Studio() {
         prev.map((p) =>
           p.id === newPost.id
             ? {
-                ...p,
-                status: "Draft",
-                isNew: true,
-                seoScore: newPost.seoScore || 78,
-                geoScore: newPost.geoScore || 70,
-                progress: 100,
-              }
+              ...p,
+              status: "Draft",
+              isNew: true,
+              seoScore: newPost.seoScore || 78,
+              geoScore: newPost.geoScore || 70,
+              progress: 100,
+            }
             : p
         )
       );
@@ -247,17 +279,72 @@ export default function Studio() {
     genTimersRef.current.push(t1, t2, t3, t4);
   };
 
-  const handleCompleteScratchSave = (savedPost) => {
-    setPosts((prev) => {
-      const exists = prev.some((p) => p.id === savedPost.id);
-      if (exists) {
-        return prev.map((p) => (p.id === savedPost.id ? savedPost : p));
+  const handleCompleteScratchSave = async (savedPost) => {
+    try {
+      // Check if ID is an existing 24-character hexadecimal MongoDB ID
+      const isMongoId = savedPost.id && /^[0-9a-fA-F]{24}$/.test(savedPost.id);
+      const url = isMongoId ? `/api/blogs/${savedPost.id}` : "/api/blogs";
+      const method = isMongoId ? "PUT" : "POST";
+
+      const payload = {
+        title: savedPost.title || "Untitled Blog Post",
+        content: savedPost.bodyHtml || "<p>Content</p>",
+        keywords: savedPost.keyword ? [savedPost.keyword] : [],
+        metaTitle: savedPost.seoTitle || savedPost.title,
+        metaDescription: savedPost.metaDescription || "",
+        status: (savedPost.status || "Draft").toLowerCase() === "published" ? "published" : "draft",
+        seoScore: savedPost.seoScore ?? 85,
+        geoScore: savedPost.geoScore ?? 88,
+        aiGenerated: Boolean(savedPost.isAiGenerated),
+        blocks: savedPost.blocks || [],
+        outline: savedPost.outline || [],
+        author: savedPost.author || "Default (Store Default)",
+        featuredImage: savedPost.featuredImage || null,
+      };
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await res.json();
+      if (res.ok && resData.blog) {
+        const persistedPost = {
+          ...savedPost,
+          id: resData.blog._id,
+          lastModified: "Just now",
+        };
+
+        setPosts((prev) => {
+          const exists = prev.some((p) => p.id === persistedPost.id || p.id === savedPost.id);
+          if (exists) {
+            return prev.map((p) =>
+              p.id === persistedPost.id || p.id === savedPost.id ? persistedPost : p
+            );
+          }
+          return [persistedPost, ...prev];
+        });
+
+        shopify.toast?.show(`Saved blog "${persistedPost.title}"`);
+      } else {
+        throw new Error(resData.message || "Failed to persist blog to database");
       }
-      return [savedPost, ...prev];
-    });
+    } catch (err) {
+      console.error("Database save error:", err);
+      shopify.toast?.show(`Saved blog draft locally`, { isError: true });
+
+      setPosts((prev) => {
+        const exists = prev.some((p) => p.id === savedPost.id);
+        if (exists) {
+          return prev.map((p) => (p.id === savedPost.id ? savedPost : p));
+        }
+        return [savedPost, ...prev];
+      });
+    }
+
     setEditingScratchPost(null);
     setViewMode("list");
-    shopify.toast?.show(`Saved "${savedPost.title}"`);
   };
 
   const handleEditPost = (post) => {
@@ -282,12 +369,19 @@ export default function Studio() {
     shopify.toast?.show(`Duplicated "${post.title}"`);
   };
 
-  const handleDeletePost = (post) => {
+  const handleDeletePost = async (post) => {
     setPosts((prev) => prev.filter((p) => p.id !== post.id));
     setSelectedIds((prev) => prev.filter((id) => id !== post.id));
-    shopify.toast?.show(`Deleted "${post.title}"`);
-  };
+    if (post.id && /^[0-9a-fA-F]{24}$/.test(post.id)) {
+      try {
+        await fetch(`/api/blogs/${post.id}`, { method: "DELETE" });
+      } catch (e) {
+        console.error("Failed to delete blog from database:", e);
+      }
+    }
 
+    shopify.toast?.show(`Deleted blog "${post.title}"`);
+  };
   const handleUpdatePost = (updatedPost) => {
     setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)));
     setActiveDetailPost(updatedPost);

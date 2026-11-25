@@ -7,7 +7,7 @@ function sanitizeHtml(html) {
   if (!html) return "";
   // Strip any existing ql-ui spans to prevent duplicate spans during HTML paste
   let clean = html.replace(/<span class="ql-ui"[^>]*><\/span>/gi, "");
-  
+
   // Strip leading bullet characters, HTML bullet entities, and excessive whitespace from li text
   clean = clean.replace(/<li([^>]*)>([\s\S]*?)<\/li>/gi, (match, attrs, innerText) => {
     const textCleaned = innerText
@@ -164,152 +164,79 @@ export function OutlineModal({
 
   const [outlineProgress, setOutlineProgress] = useState(0);
 
-  const handleGenerateAiOutline = () => {
+  const handleGenerateAiOutline = async () => {
     const rawKeywords = Array.isArray(keywords) ? keywords.join(", ") : (keywords || "");
-    const rawTopic = (postTitle || rawKeywords || "").trim();
-
-    if (!rawTopic) {
-      setValidationError("Please enter Post Title and Keywords to generate");
-      if (onValidationError) {
-        onValidationError();
-      }
+    const cleanTitle = (postTitle || "").trim();
+    const cleanKeywords = rawKeywords.trim();
+    if (!cleanTitle || !cleanKeywords) {
+      setValidationError("Please enter both Post Title and Keywords to generate outline.");
+      if (onValidationError) onValidationError();
       return;
     }
     setValidationError("");
-
     setIsGenerating(true);
-    setOutlineProgress(10);
-    if (onGeneratingProgress) onGeneratingProgress(true, 10, "Step 1/3: Analyzing topic & outline...");
+    setOutlineProgress(15);
+    if (onGeneratingProgress) onGeneratingProgress(true, 15, "Connecting to AI outline engine...");
 
-    const timer1 = setTimeout(() => {
-      setOutlineProgress(35);
-      if (onGeneratingProgress) onGeneratingProgress(true, 35, "Step 1/3: Structuring headings & key sections...");
-    }, 900);
+    try {
+      const response = await fetch("/api/ai/generate-outline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brief: {
+            keyword: cleanTitle,
+            secondary_keywords: Array.isArray(keywords) ? keywords : [cleanKeywords],
+            search_intent: "Informational",
+            target_audience: "General Readers",
+            tone_of_voice: "Professional & Informative",
+            target_word_count: 1800,
+          },
+        }),
+      });
 
-    const timer2 = setTimeout(() => {
-      setOutlineProgress(70);
-      if (onGeneratingProgress) onGeneratingProgress(true, 70, "Step 1/3: Formatting bullets & semantic hierarchy...");
-    }, 1900);
+      setOutlineProgress(75);
+      if (onGeneratingProgress) onGeneratingProgress(true, 75, "Structuring headings and SEO hierarchy...");
 
-    const timer3 = setTimeout(() => {
-      setOutlineProgress(92);
-      if (onGeneratingProgress) onGeneratingProgress(true, 92, "Step 1/3: Finalizing article outline...");
-    }, 2800);
-
-    const finalTimer = setTimeout(() => {
-      setOutlineProgress(100);
-      if (onGeneratingProgress) onGeneratingProgress(true, 100, "Outline generated successfully!");
-
-      const isChatGPT = /chat\s*gpt|llm|openai|claude|gemini/i.test(rawTopic);
-
-      let aiHtml = "";
-
-      if (isChatGPT) {
-        aiHtml =
-          "<h1>The case for Chat GPT: a pragmatic claim worth testing</h1>" +
-          "<h2>What “very good” means in practical terms: accuracy, speed, breadth, cost</h2>" +
-          "<ul>" +
-          "<li>Define value across four axes: factual reliability, time-to-draft, domain coverage, and cost per task.</li>" +
-          "<li>Set expectations: Chat GPT is a strong generalist with standout performance on text-heavy tasks.</li>" +
-          "<li>Contrast with alternatives: search engines, human-only workflows, and task-specific AI tools.</li>" +
-          "<li>Clarify success criteria before judging performance to avoid vague assessments.</li>" +
-          "</ul>" +
-          "<h2>Where Chat GPT reliably excels today: patterns and task archetypes</h2>" +
-          "<ul>" +
-          "<li>Summarization, drafting, rewriting, explanation, and ideation across varied tones and formats.</li>" +
-          "<li>Coding assistance for scaffolding, refactors, test cases, and docstrings.</li>" +
-          "<li>Knowledge retrieval and synthesis when paired with provided sources or citations.</li>" +
-          "<li>Language tasks: translation, simplification, and localization with style control.</li>" +
-          "</ul>" +
-          "<h2>How to measure value: outcome-based benchmarks over hype</h2>" +
-          "<ul>" +
-          "<li>Compare baseline vs. Chat GPT-assisted outputs on quality, time, and revision effort.</li>" +
-          "<li>Use blind reviews and rubrics to reduce bias in quality judgments.</li>" +
-          "<li>Track edit distance and acceptance rate to quantify “useful on first pass.”</li>" +
-          "<li>Iterate on prompts and inputs before concluding limits or shortcomings.</li>" +
-          "</ul>" +
-          "<h1>Evidence from everyday workflows that Chat GPT improves outcomes</h1>" +
-          "<h2>Writing and editing: clarity passes, tone shifts, and structure fixes</h2>" +
-          "<ul>" +
-          "<li>Transform rough notes into coherent outlines, then expand with controlled voice.</li>" +
-          "<li>Run targeted edits: reduce jargon, tighten openings, or add examples.</li>" +
-          "<li>Enforce style guides with checklists for headers, readability, and inclusive language.</li>" +
-          "<li>Produce alternative headlines, CTAs, and meta descriptions for A/B testing.</li>" +
-          "</ul>";
-      } else {
-        // Full structured outline for 2026 Mother and Baby Fashion
-        aiHtml =
-          "<h1>2026’s Big Shift: Practical, Planet-First Fashion for Mother and Baby</h1>" +
-          "<h2>Data-backed drivers: climate volatility, stricter safety standards, and time-poor parenting</h2>" +
-          "<ul>" +
-          "<li>Why aesthetics now follow function in Mother and Baby wear</li>" +
-          "</ul>" +
-          "<h2>Skin-Safe, Sustainable Materials That Dominate 2026 Collections</h2>" +
-          "<ul>" +
-          "<li>Bio-based fibers (TENCEL Lyocell, organic cotton, hemp) that respect newborn skin</li>" +
-          "<li>Plant and low-tox dyes delivering soft hues without harsh residues</li>" +
-          "</ul>" +
-          "<h2>Smart Textiles Enter Daily Wear: Sensible Upgrades, Not Gimmicks</h2>" +
-          "<ul>" +
-          "<li>Temperature-regulating knits and UPF 50+ stroller covers for heat waves</li>" +
-          "<li>Washable sensors and privacy checks: what parents must verify in 2026</li>" +
-          "</ul>" +
-          "<h2>Postpartum-Ready Fits and Nursing-First Design That Look Polished</h2>" +
-          "<ul>" +
-          "<li>Invisible nursing access: magnets, low-profile zippers, and wrap fronts that don’t scream “maternity”</li>" +
-          "<li>Core-support leggings and adjustable waistbands tailored to fourth-trimester bodies</li>" +
-          "</ul>" +
-          "<h2>Coordinated Capsule Wardrobes for Mother and Baby That Cut Morning Stress</h2>" +
-          "<ul>" +
-          "<li>The three-color system for effortless mix-and-match outfits</li>" +
-          "<li>Modular layers (bodysuit + romper + cardigan) that handle changing temps and messes</li>" +
-          "</ul>" +
-          "<h2>Safety and Compliance: Non-Negotiables in Mother and Baby Apparel</h2>" +
-          "<ul>" +
-          "<li>Labels that matter in 2026: OEKO-TEX STANDARD 100, GOTS, and CPSIA compliance</li>" +
-          "<li>Snaps, zippers, and trims: nickel-free, lead-safe, and swallow-safe hardware</li>" +
-          "</ul>" +
-          "<h2>Inclusive, Adaptive, and Gender-Neutral—Without Losing Personality</h2>" +
-          "<ul>" +
-          "<li>Adaptive babywear for feeding tubes, casts, or sensory needs</li>" +
-          "<li>Size-inclusive ranges that honor body changes without upcharging</li>" +
-          "<li>Gender-neutral palettes beyond beige: saturated brights and story-driven graphics</li>" +
-          "</ul>" +
-          "<h2>Smarter Shopping for 2026: Rent, Resale, and Care to Maximize Value</h2>" +
-          "<ul>" +
-          "<li>Rent high-turnover pieces; buy everyday basics; resell milestone outfits</li>" +
-          "<li>Fabric care that extends life: cold wash, microplastic filters, and repairable seams</li>" +
-          "<li>Cost-per-wear math so trends don’t bust the Mother and Baby budget</li>" +
-          "</ul>" +
-          "<h2>FAQs: Clear Answers to 2026 Mother and Baby Fashion Questions</h2>" +
-          "<ul>" +
-          "<li>Are smart textiles and finishings safe for newborn skin in 2026?</li>" +
-          "<li>Which certifications should I prioritize for Mother and Baby clothing?</li>" +
-          "<li>How do I balance postpartum comfort with a polished, work-ready look?</li>" +
-          "<li>Is gender-neutral fashion limiting my baby’s expression?</li>" +
-          "<li>Do rental services sanitize baby clothes to high hygiene standards?</li>" +
-          "<li>Can AI sizing tools actually fit a changing postpartum body?</li>" +
-          "</ul>";
+      const text = await response.text();
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error(text || "Unable to connect to the server. Please try again.");
+      }
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || data.error || "Failed to generate outline. Please try again.");
       }
 
-      const cleanAiHtml = sanitizeHtml(aiHtml);
+      const outlineArray = data.outline || [];
+      let generatedHtml = "";
+
+      outlineArray.forEach((item) => {
+        const levelTag = item.level ? item.level.toLowerCase() : "h2";
+        generatedHtml += `<${levelTag}>${item.title}</${levelTag}>`;
+        if (item.description) {
+          generatedHtml += `<ul><li>${item.description}</li></ul>`;
+        }
+      });
+
+      const cleanHtml = sanitizeHtml(generatedHtml);
+
       if (quillInstanceRef.current) {
-        quillInstanceRef.current.clipboard.dangerouslyPasteHTML(cleanAiHtml);
+        quillInstanceRef.current.clipboard.dangerouslyPasteHTML(cleanHtml);
       }
       if (onSave) {
-        onSave(cleanAiHtml);
+        onSave(cleanHtml);
       }
+
+      setOutlineProgress(100);
+      if (onGeneratingProgress) onGeneratingProgress(true, 100, "Outline generated successfully!");
+    } catch (err) {
+      setValidationError(err.message);
+    } finally {
       setIsGenerating(false);
       setOutlineProgress(0);
       if (onGeneratingProgress) onGeneratingProgress(false, 0, "");
-    }, 3500);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(finalTimer);
-    };
+    }
   };
 
   const handleSave = () => {

@@ -16,7 +16,34 @@
       href="https://cdn.shopify.com/static/fonts/inter/v4/styles.css"
     />
     <meta name="shopify-api-key" content="%SHOPIFY_API_KEY%" />
-    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+    <script>
+      // Load Shopify App Bridge only when running inside Shopify Admin iframe or embedded mode
+      (function () {
+        var isEmbedded = false;
+        try {
+          isEmbedded = window.top !== window.self;
+        } catch (e) {
+          isEmbedded = true;
+        }
+        var searchParams = new URLSearchParams(window.location.search);
+        if (
+          searchParams.get("embedded") === "1" ||
+          searchParams.get("host") ||
+          searchParams.get("shop")
+        ) {
+          isEmbedded = true;
+        }
+        if (searchParams.get("standalone") === "true") {
+          isEmbedded = false;
+        }
+
+        if (isEmbedded) {
+          var script = document.createElement("script");
+          script.src = "https://cdn.shopify.com/shopifycloud/app-bridge.js";
+          document.head.appendChild(script);
+        }
+      })();
+    </script>
     <title>BlogGenius</title>
   </head>
   <body>

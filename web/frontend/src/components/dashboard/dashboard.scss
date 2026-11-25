@@ -1,7 +1,109 @@
-// Metric Scorecards
-.polaris-metric-card {
+// --------------------------------------------------------------------------
+// Executive KPI Cards (4 Distinct, Handsome Cards with comfortable 16px gap)
+// --------------------------------------------------------------------------
+.executive-kpi-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  width: 100%;
+
+  @media (max-width: 960px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 110px;
+  box-sizing: border-box;
+}
+
+.kpi-card-top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+
+  .kpi-num {
+    font-size: 26px;
+    font-weight: 750;
+    color: #0f172a;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+
+    &.tone-green {
+      color: #059669;
+    }
+    &.tone-amber {
+      color: #d97706;
+    }
+  }
+
+  .kpi-pill {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 1.5px 6.5px;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+    line-height: 1.35;
+
+    &.kpi-pill-success {
+      background-color: #ecfdf5;
+      color: #047857;
+    }
+    &.kpi-pill-warning {
+      background-color: #fffbeb;
+      color: #b45309;
+    }
+    &.kpi-pill-neutral {
+      background-color: #f1f5f9;
+      color: #475569;
+    }
+  }
+}
+
+.kpi-card-mid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+
+  .kpi-label {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1e293b;
+    letter-spacing: -0.01em;
+  }
+
+  .Polaris-Icon {
+    width: 14px !important;
+    height: 14px !important;
+    color: #94a3b8;
+    transition: all 0.14s ease;
+  }
+}
+
+.kpi-card-sub {
+  font-size: 11.5px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 450;
+  margin-top: 2px;
 }
 
 
@@ -311,4 +413,472 @@
 .sliding-seg-btn:hover {
   color: #18181b !important;
 }
+
+// --------------------------------------------------------------------------
+// KPI Scorecards Sparklines & Health Ring
+// --------------------------------------------------------------------------
+.kpi-trend-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+
+  &.positive {
+    background-color: #ecfdf5;
+    color: #047857;
+  }
+  &.neutral {
+    background-color: #f1f5f9;
+    color: #475569;
+  }
+  &.success {
+    background-color: #f0fdf4;
+    color: #15803d;
+  }
+}
+
+// --------------------------------------------------------------------------
+// AI Performance & Citations Analytics Section (DATN Visual Telemetry)
+// --------------------------------------------------------------------------
+.ai-analytics-section {
+  width: 100%;
+
+  .analytics-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+
+    @media (max-width: 640px) {
+      flex-direction: column;
+    }
+  }
+
+  .geo-badge-pill {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 1.5px 6px;
+    border-radius: 4px;
+    background: #0f172a;
+    color: #ffffff;
+  }
+
+  .header-right-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .metric-view-tabs {
+    display: inline-flex;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+
+    .metric-tab-btn {
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+
+      &:hover {
+        color: #0f172a;
+      }
+
+      &.active {
+        background: #ffffff;
+        color: #0f172a;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+
+  .timeframe-toggle-pills {
+    display: inline-flex;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+
+    .timeframe-btn {
+      padding: 3px 9px;
+      font-size: 11.5px;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+
+      &:hover {
+        color: #0f172a;
+      }
+
+      &.active {
+        background: #ffffff;
+        color: #0f172a;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+
+  .analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 24px;
+    align-items: start;
+
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  // Left: Timeline chart column
+  .timeline-chart-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .chart-stat-bar {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+
+    .stat-unit {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+
+      .stat-number {
+        font-size: 26px;
+        font-weight: 700;
+        color: #0f172a;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 500;
+      }
+    }
+
+    .stat-growth-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #059669;
+      background: #ecfdf5;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+
+    .engine-filter-chips {
+      margin-left: auto;
+      display: flex;
+      gap: 4px;
+
+      .filter-chip {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 3px 9px;
+        border-radius: 99px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.12s ease;
+
+        &:hover {
+          color: #0f172a;
+          border-color: #cbd5e1;
+        }
+
+        &.active {
+          background: #0f172a;
+          color: #ffffff;
+          border-color: #0f172a;
+        }
+      }
+    }
+  }
+
+  .svg-chart-container {
+    position: relative;
+    width: 100%;
+
+    .interactive-svg-chart {
+      width: 100%;
+      height: auto;
+      overflow: visible;
+      user-select: none;
+    }
+  }
+
+  .chart-tooltip {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    pointer-events: none;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #ffffff;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
+    z-index: 30;
+    min-width: 150px;
+    animation: tooltipFade 0.12s ease-out;
+
+    .tooltip-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+      padding-bottom: 5px;
+      margin-bottom: 6px;
+
+      .tooltip-date {
+        font-size: 11px;
+        font-weight: 600;
+        color: #94a3b8;
+      }
+
+      .tooltip-total {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #10b981;
+      }
+    }
+
+    .tooltip-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .breakdown-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #cbd5e1;
+
+        strong {
+          color: #ffffff;
+          font-weight: 600;
+          margin-left: 2px;
+        }
+
+        .dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+
+          &.dot-perplexity { background-color: #6366f1; }
+          &.dot-searchgpt { background-color: #10b981; }
+          &.dot-gemini { background-color: #0ea5e9; }
+        }
+      }
+    }
+  }
+
+  // Right: Engine Share Donut
+  .engine-share-col {
+    border-left: 1px solid #f1f5f9;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    @media (max-width: 900px) {
+      border-left: none;
+      border-top: 1px solid #f1f5f9;
+      padding-left: 0;
+      padding-top: 16px;
+    }
+
+    .share-col-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .donut-wrap {
+      width: 120px;
+      height: 120px;
+      margin: 4px auto;
+
+      .donut-svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+        overflow: visible;
+
+        text {
+          transform: rotate(90deg);
+          transform-origin: 60px 60px;
+        }
+
+        .donut-segment {
+          transition: stroke-width 0.15s ease;
+          &:hover {
+            stroke-width: 13;
+          }
+        }
+      }
+    }
+
+    .engine-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .crawler-telemetry-box {
+      margin-top: 6px;
+      padding: 9px 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+
+      .crawler-box-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+        font-weight: 650;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+
+        .crawler-status-badge {
+          font-size: 9.5px;
+          padding: 1px 5px;
+          border-radius: 3px;
+          background: #ecfdf5;
+          color: #047857;
+          font-weight: 700;
+        }
+      }
+
+      .crawler-list {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .crawler-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 11px;
+
+        .crawler-left {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+
+          .crawler-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            flex-shrink: 0;
+          }
+
+          .crawler-bot {
+            color: #1e293b;
+            font-weight: 500;
+          }
+        }
+
+        .crawler-latency {
+          color: #94a3b8;
+          font-size: 10px;
+          font-family: ui-monospace, monospace;
+        }
+      }
+    }
+
+    .engine-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      padding: 2px 0;
+
+      .engine-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .engine-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .engine-meta {
+          display: flex;
+          flex-direction: column;
+          line-height: 1.15;
+
+          .engine-name {
+            font-weight: 550;
+            color: #0f172a;
+          }
+
+          .engine-tag {
+            font-size: 10px;
+            color: #94a3b8;
+          }
+        }
+      }
+
+      .engine-right {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+
+        .engine-count {
+          font-weight: 600;
+          color: #0f172a;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .engine-pct {
+          font-size: 10.5px;
+          color: #64748b;
+          font-family: ui-monospace, monospace;
+        }
+      }
+    }
+  }
+}
+
 
