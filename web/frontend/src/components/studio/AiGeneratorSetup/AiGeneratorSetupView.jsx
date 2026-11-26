@@ -118,19 +118,20 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration, initialBrie
   };
 
   const savedPool = getSavedKeywords();
-  const suggestedKeywords = [
-    ...savedPool.map((kw) => ({
-      kw,
-      volume: "3.5K/mo",
-      kd: "Low",
-    })),
-    { kw: "Mother and baby care", volume: "8.2K/mo", kd: "Low" },
-    { kw: "organic baby clothes online", volume: "5.4K/mo", kd: "Low" },
-    { kw: "safe baby skincare products", volume: "4.1K/mo", kd: "Medium" },
-    { kw: "postpartum essentials for moms", volume: "6.8K/mo", kd: "Low" },
-    { kw: "maternity fashion trends 2026", volume: "3.9K/mo", kd: "Low" },
-    { kw: "shopify seo guide 2026", volume: "4.5K/mo", kd: "Low" },
-  ].filter((item, index, self) => index === self.findIndex((t) => t.kw.toLowerCase() === item.kw.toLowerCase()));
+  const briefKeywords = [
+    ...(initialBrief?.primary_keyword ? [initialBrief.primary_keyword] : []),
+    ...(Array.isArray(initialBrief?.secondary_keywords) ? initialBrief.secondary_keywords : []),
+  ];
+  // Strictly use real saved keywords and current brief keywords — no hardcoded mock data
+  const combinedKwPool = Array.from(
+    new Set([...savedPool, ...briefKeywords].filter(Boolean))
+  );
+
+  const suggestedKeywords = combinedKwPool.map((kw) => ({
+    kw,
+    volume: "High Intent",
+    kd: "Targeted",
+  }));
 
   const handleSelectSuggestedKeyword = (kw) => {
     setKeywords((prev) => {
@@ -408,34 +409,39 @@ export function AiGeneratorSetupView({ onBack, onCompleteGeneration, initialBrie
             <Text variant="bodySm" tone="subdued">
               Click on high-opportunity keyword sets discovered by our GEO &amp; SEO intelligence engine:
             </Text>
-            <BlockStack gap="150">
-              {suggestedKeywords.map((item) => (
-                <div
-                  key={item.kw}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "10px 14px",
-                    border: "1px solid #e4e4e7",
-                    borderRadius: "8px",
-                    backgroundColor: "#fafafa",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => handleSelectSuggestedKeyword(item.kw)}
-                >
-                  <Text variant="bodySm" fontWeight="semibold">
-                    {item.kw}
-                  </Text>
-                  <InlineStack gap="200" align="center">
-                    <Text variant="bodyXs" tone="subdued">
-                      Vol: {item.volume}
+            {suggestedKeywords.length > 0 ? (
+              <BlockStack gap="150">
+                {suggestedKeywords.map((item) => (
+                  <div
+                    key={item.kw}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 14px",
+                      border: "1px solid #e4e4e7",
+                      borderRadius: "8px",
+                      backgroundColor: "#fafafa",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => handleSelectSuggestedKeyword(item.kw)}
+                  >
+                    <Text variant="bodySm" fontWeight="semibold">
+                      {item.kw}
                     </Text>
-                    <Badge tone="success">{item.kd} KD</Badge>
-                  </InlineStack>
-                </div>
-              ))}
-            </BlockStack>
+                    <InlineStack gap="200" align="center">
+                      <Badge tone="success">{item.kd}</Badge>
+                    </InlineStack>
+                  </div>
+                ))}
+              </BlockStack>
+            ) : (
+              <div style={{ textAlign: "center", padding: "28px 16px", backgroundColor: "#f9fafb", borderRadius: "8px" }}>
+                <Text variant="bodySm" tone="subdued">
+                  No saved keywords found. You can discover, analyze, and save keywords from the <strong>Keywords Suggestion</strong> module to use them here.
+                </Text>
+              </div>
+            )}
           </BlockStack>
         </Modal.Section>
       </Modal>
