@@ -2,11 +2,11 @@
 // BlogGenius Workspace Shell — Precision Desktop Nav (Linear / Vercel Grade)
 // ==========================================================================
 
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden; // Lock viewport scroll
+// Lock viewport ONLY when standalone app shell is active
+body:has(.bg-app-shell) {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
 .bg-app-shell {
