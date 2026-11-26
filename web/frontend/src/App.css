@@ -9,6 +9,42 @@ body, button, input, select, textarea, table, th, td, h1, h2, h3, h4, h5, h6, sp
   letter-spacing: -0.011em;
 }
 
+/* -------------------------------------------------------------------------
+   Shopify Embedded Mode — Natural Page Scrolling
+   Allow iframe document and Polaris Frame to grow and scroll naturally.
+------------------------------------------------------------------------- */
+html,
+body {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.Polaris-Frame {
+  min-height: 100vh !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.Polaris-Frame__Main {
+  min-height: 100vh !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.Polaris-Frame__Content {
+  min-height: 100vh !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
+/* App Bridge v4 Navigation Menu: custom element handled by Shopify Admin.
+   Ensure it never renders visible in-page text links in the iframe content. */
+ui-nav-menu {
+  display: none !important;
+}
+
 /* Crisp rendering overrides */
 .Polaris-Text--root,
 .Polaris-Header-Title,
